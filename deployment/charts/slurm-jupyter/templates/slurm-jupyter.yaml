@@ -31,11 +31,16 @@ spec:
           volumeMounts: 
             - name: slurm-config
               mountPath: /etc/slurm-llnl   
+            - name: munge-key-file
+              mountPath: "/etc/munge"
       volumes:
         - name: slurm-config
           configMap:
             name: slurm-config-map
             items:
              - key: slurm-conf
-               path: slurm.conf   
+               path: slurm.conf         
+        - name: munge-key-file
+          secret:
+            secretName: slurm-munge-key   
       
