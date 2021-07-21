@@ -7,3 +7,4 @@
 #SBATCH --mem=2300
 #
 srun python3 /tmp/test.py
+srun sleep 60

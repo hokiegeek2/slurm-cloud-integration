@@ -32,7 +32,8 @@ WORKDIR /storage
 RUN wget https://download.schedmd.com/slurm/slurm-20.02.7.tar.bz2
 RUN tar xvf slurm-20.02.7.tar.bz2
 WORKDIR /storage/slurm-20.02.7
-RUN ./configure --prefix=/storage/slurm-build --sysconfdir=/etc/slurm --enable-pam --with-pam_dir=/lib/x86_64-linux-gnu/security/ --without-shared-libslurm
+RUN ./configure --prefix=/storage/slurm-build --sysconfdir=/etc/slurm --enable-pam \
+    --with-pam_dir=/lib/x86_64-linux-gnu/security/ --without-shared-libslurm
 RUN make
 RUN make contrib
 RUN make install
@@ -50,7 +51,6 @@ RUN mkdir -p /etc/slurm /etc/slurm/prolog.d /etc/slurm/epilog.d /var/spool/slurm
 
 # Get example files and copy to corresponding directories
 RUN git clone https://github.com/mknoxnv/ubuntu-slurm.git
-#RUN cp ubuntu-slurm/slurmdbd.service /etc/systemd/system/
 RUN cp ubuntu-slurm/slurmd.init /etc/init.d/slurmd
 RUN cp ubuntu-slurm/slurm.default /etc/default/slurm
 RUN chmod 755 /etc/init.d/slurmd
@@ -65,7 +65,7 @@ RUN rm -rf slurm-20.02.7.tar.bz2
 RUN rm -rf slurm-20.02.7_1.0_amd64.deb 
 
 COPY scripts/initialize-mariadb.sh initialize-mariadb.sh
-COPY scripts/start-slurmctld.sh start-slurmctld.sh
-COPY single-node-slurm.conf /etc/slurm/slurm.conf
+COPY scripts/start-slurm-cluster.sh start-slurm-cluster.sh
+COPY conf/single-node-slurm.conf /etc/slurm/slurm.conf
 
-ENTRYPOINT sh start-slurmctld.sh
+ENTRYPOINT sh start-slurm-cluster.sh
