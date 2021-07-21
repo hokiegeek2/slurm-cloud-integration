@@ -64,7 +64,9 @@ The combination of the slurm-jupyter-docker and slurm-single-node [Dockerfiles](
 Integration testing of slurm-jupyterlab on k8s with slurm-single-node involves running the slurm-single-node [Docker image](https://hub.docker.com/repository/docker/hokiegeek2/slurm-single-node). The docker run command is as follows:
 
 ```
-docker run -it --rm --entrypoint=bash --network=host -v $PWD/munge.key:/tmp/munge.key hokiegeek2/slurm-single-node
+docker run -it --rm --network=host -v $PWD/munge.key:/tmp/munge.key hokiegeek2/slurm-single-node:$VERSION
 ```
 
-The munge.key is passed into the Docker container, which is an extremely important detail. The munge key either in the slurm docker container or on a bare-metal slurm cluster *must* be the same munge.key in the slurm-jupyterlab deployment on k8s. If not, authentication from slurm-jupyterlab on k8s to the slurm cluster will fail.
+The munge.key is passed into the Docker container, which is an extremely important detail. The munge key either in the slurm docker container or on a bare-metal slurm cluster *must* be the same munge.key in the slurm-jupyterlab deployment on k8s. If not, authentication from slurm-jupyterlab on k8s to the slurm cluster will fail with the following message:
+
+![](https://user-images.githubusercontent.com/10785153/126519402-7a0e7679-2c15-4937-b883-d7bd87d090b1.png)
