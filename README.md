@@ -8,7 +8,7 @@ The combination of the slurm-jupyter-docker and slurm-single-node Dockerfiles ar
 
 ## slurm-single-node: full stack, single-node Slurm in Docker
 
-The [slurm-single-node](https://github.com/hokiegeek2/slurm-cloud-integration/blob/master/src/docker/slurm-single-node) Dockerfile delivers an image that enables integration testing with a full Slurm stack w/ one worker (slurmd) node. 
+The [slurm-single-node](https://github.com/hokiegeek2/slurm-cloud-integration/blob/master/src/docker/slurm-single-node) Dockerfile delivers an image that enables integration testing with a full Slurm stack w/ one worker (slurmd) node. This Dockerfile is based upon this excellent [example](https://blog.llandsmeer.com/tech/2020/03/02/slurm-single-instance.html)
 
 The slurm-single-node Docker image is built from the project root directory as follows:
 
