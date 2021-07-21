@@ -16,6 +16,10 @@ The slurm-single-node Docker image is built from the project root directory as f
 docker build -f src/docker/slurm-single-node -t hokiegeek2/slurm-single-node:$VERSION .
 ```
 
+Successful startup of slurm-single-node looks like this:
+
+![](https://user-images.githubusercontent.com/10785153/126529217-e8df432b-c925-4155-af37-d00e9205cd16.png)
+
 ## slurm-jupyterlab on k8s
 The [slurm-jupyter-docker](https://github.com/hokiegeek2/slurm-cloud-integration/blob/master/src/docker/slurm-jupyter-docker) Dockerfile and slurm-jupyter [Helm chart](https://github.com/hokiegeek2/slurm-cloud-integration/tree/master/deployment/charts/slurm-jupyter) enables deployment of the awesome [NERSC](https://github.com/NERSC) [jupyterlab-slurm](https://github.com/NERSC/jupyterlab-slurm) application to Kubernetes. 
 
@@ -56,6 +60,10 @@ kubectl create secret generic slurm-munge-key --from-file=/munge.key -n slurm-in
 ```
 
 The configuration logic for loading the k8s munge.key secret is in the slurm-jupyter [Helm template](https://github.com/hokiegeek2/slurm-cloud-integration/blob/master/deployment/charts/slurm-jupyter/templates/slurm-jupyter.yaml)
+
+Successful deployment of slurm-jupyterlab looks like this:
+
+![](https://user-images.githubusercontent.com/10785153/126529579-6545f68a-9b1b-452b-9896-0d6e0cef52ef.png)
 
 ## Integration testing of slurm-jupyterlab on k8s with slurm-single-node
 
