@@ -32,7 +32,7 @@ spec:
             - name: slurm-config
               mountPath: /etc/slurm-llnl   
             - name: munge-key-file
-              mountPath: "/etc/munge"
+              mountPath: "/tmp/munge"
       volumes:
         - name: slurm-config
           configMap:

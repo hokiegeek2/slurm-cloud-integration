@@ -1,0 +1,71 @@
+FROM ubuntu:18.04
+
+RUN DEBIAN_FRONTEND=noninteractive 
+
+CMD ["/bin/bash"]
+
+# Install all base dependencies
+RUN apt-get update && apt install sudo git gcc make ruby ruby-dev python3 \
+    libpam0g-dev libmariadb-client-lgpl-dev libmysqlclient-dev wget vim -y
+ 
+# install gem needed for dpkg
+RUN gem install fpm
+ 
+# Install munge
+RUN apt-get install libmunge-dev libmunge2 munge -y
+
+# Install hdf5
+RUN apt-get install libhdf5-serial-dev hdf5-tools -y
+
+
+# Install MariaDB for slurm accounting (as the instructions state, change the password)
+RUN apt-get install mariadb-server -y
+
+COPY scripts/initialize-mariadb.sh /tmp/initialize-mariadb.sh
+
+RUN service mysql start
+RUN service munge start
+
+RUN mkdir /storage
+
+WORKDIR /storage
+RUN wget https://download.schedmd.com/slurm/slurm-20.02.7.tar.bz2
+RUN tar xvf slurm-20.02.7.tar.bz2
+WORKDIR /storage/slurm-20.02.7
+RUN ./configure --prefix=/storage/slurm-build --sysconfdir=/etc/slurm --enable-pam --with-pam_dir=/lib/x86_64-linux-gnu/security/ --without-shared-libslurm
+RUN make
+RUN make contrib
+RUN make install
+
+WORKDIR /storage
+RUN fpm -s dir -t deb -v 1.0 -n slurm-20.02.7 --prefix=/usr -C /storage/slurm-build .
+RUN dpkg -i slurm-20.02.7_1.0_amd64.deb
+
+# Add the slurm user
+RUN useradd -m -u 1004 slurm
+
+# Make runtime and conf directories
+RUN mkdir -p /etc/slurm /etc/slurm/prolog.d /etc/slurm/epilog.d /var/spool/slurm/ctld \
+    /var/spool/slurm/d /var/log/slurm /var/run/slurm
+
+# Get example files and copy to corresponding directories
+RUN git clone https://github.com/mknoxnv/ubuntu-slurm.git
+#RUN cp ubuntu-slurm/slurmdbd.service /etc/systemd/system/
+RUN cp ubuntu-slurm/slurmd.init /etc/init.d/slurmd
+RUN cp ubuntu-slurm/slurm.default /etc/default/slurm
+RUN chmod 755 /etc/init.d/slurmd
+RUN cp ubuntu-slurm/slurmdbd.init /etc/init.d/slurmdbd
+RUN chmod 755 /etc/init.d/slurmdbd
+RUN cp ubuntu-slurm/slurmdbd.service /etc/systemd/system/
+RUN cp ubuntu-slurm/slurmdbd.conf /etc/slurm/
+
+RUN chown slurm /var/spool/slurm/ctld /var/spool/slurm/d /var/log/slurm /var/run/slurm
+
+RUN rm -rf slurm-20.02.7.tar.bz2
+RUN rm -rf slurm-20.02.7_1.0_amd64.deb 
+
+COPY scripts/initialize-mariadb.sh initialize-mariadb.sh
+COPY scripts/start-slurmctld.sh start-slurmctld.sh
+COPY single-node-slurm.conf /etc/slurm/slurm.conf
+
+ENTRYPOINT sh start-slurmctld.sh
