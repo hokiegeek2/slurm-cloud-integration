@@ -13,7 +13,7 @@ The [slurm-single-node](https://github.com/hokiegeek2/slurm-cloud-integration/bl
 The slurm-single-node Docker image is built from the project root directory as follows:
 
 ```
-docker build -f src/docker/slurm-single-node -t hokiegeek2/slurm-single-node .
+docker build -f src/docker/slurm-single-node -t hokiegeek2/slurm-single-node:$VERSION .
 ```
 
 ## slurm-jupyterlab on k8s
@@ -22,7 +22,7 @@ The [slurm-jupyter-docker](https://github.com/hokiegeek2/slurm-cloud-integration
 The slurm-jupyter Docker image is built from the project root directory as follows:
 
 ```
-docker build -f src/docker/slurm-jupyter-docker -t hokiegeek2/slurm-jupyter:20.11.8-1 .
+docker build -f src/docker/slurm-jupyter-docker -t hokiegeek2/slurm-jupyter:$VERSION .
 ```
 
 The command sequence to start slurm-jupyterlab is contained within the [start-slurm-jupyter.sh](https://github.com/hokiegeek2/slurm-cloud-integration/blob/master/src/scripts/start-slurm-jupyter.sh) file and is as follows:
@@ -49,6 +49,14 @@ The helm command is executed as follows from the project root directory:
 ```
 helm install -n slurm-integration slurm-jupyter-server deployment/charts/slurm-jupyter/ 
 ```
+In addition to the helm chart artifacts, the slurm-jupyterhub k8s deployment requires the _same_ munge.key used in the slurm cluster that the slurm-jupyterlab will connect to. The munge.key is used to create a Kubernetes secret that is mounted in the pod. The kubectl command is as follows:
+
+```
+kubectl create secret generic slurm-munge-key --from-file=/munge.key -n slurm-integration
+```
+
+The configuration logic for loading the k8s munge.key secret is in the slurm-jupyter [Helm template](https://github.com/hokiegeek2/slurm-cloud-integration/blob/master/deployment/charts/slurm-jupyter/templates/slurm-jupyter.yaml)
+
 ## Integration testing of slurm-jupyterlab on k8s with slurm-single-node
 
 The combination of the slurm-jupyter-docker and slurm-single-node [Dockerfiles](https://github.com/hokiegeek2/slurm-cloud-integration/tree/master/src/docker) are based upon the excellent work by [Rodrigo Ancavil](https://medium.com/analytics-vidhya/slurm-cluster-with-docker-9f242deee601).
