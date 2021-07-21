@@ -78,13 +78,13 @@ tolerations: []
 
 affinity: {}
 
-######################## Pod Settings ########################
+######################### Pod Settings #########################
 
 releaseVersion: 20.11.8-1
 imagePullPolicy: IfNotPresent
 numServers: 1
 
-################ Arkouda Server Configuration ################
+################ slurm-jupyterlab Configuration ################
 
 server: 
   host: 0.0.0.0
@@ -96,3 +96,16 @@ server:
     requests:
       cpu: 250m
       memory: 128Mi
+
+###################### Slurm Configuration #####################
+
+slurmctld:
+  cluster_name: test-slurm
+  controller_machine: <controller-hostname>
+  controller_addr: <controller ip address>
+  
+slurmd:
+  node_name: <slurmd hostname/resources>
+  
+
+      

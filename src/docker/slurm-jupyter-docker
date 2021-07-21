@@ -22,7 +22,7 @@ RUN npm install -g configurable-http-proxy
 RUN pip3 install jupyterlab==2.1.2 && pip3 install jupyterlab_slurm
 RUN jupyter labextension install jupyterlab-slurm
 
-ADD scripts/start-slurm-jupyter.sh /tmp/start-slurm-jupyter.sh
+ADD src/scripts/start-slurm-jupyter.sh /tmp/start-slurm-jupyter.sh
 
 EXPOSE 8888
 
