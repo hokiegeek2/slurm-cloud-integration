@@ -63,7 +63,19 @@ The configuration logic for loading the k8s munge.key secret is in the slurm-jup
 
 Successful deployment of slurm-jupyterlab looks like this:
 
-![](https://user-images.githubusercontent.com/10785153/126529579-6545f68a-9b1b-452b-9896-0d6e0cef52ef.png)
+![](https://user-images.githubusercontent.com/10785153/126530356-26eaeaf2-c940-48f2-9849-c14eda61b924.png)
+
+Confirm connectivity to slurm via the following commands:
+
+```
+# generic cluster info including slurmd node names 
+sinfo
+
+# specific info and statuses for each slurmd node
+scontrol show nodes
+```
+
+![](https://user-images.githubusercontent.com/10785153/126530625-980de73b-57ba-4114-b9f8-b58db3654bb5.png)
 
 ## Integration testing of slurm-jupyterlab on k8s with slurm-single-node
 
