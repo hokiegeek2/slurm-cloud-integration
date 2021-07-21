@@ -90,3 +90,15 @@ docker run -it --rm --network=host -v $PWD/munge.key:/tmp/munge.key hokiegeek2/s
 The munge.key is passed into the Docker container, which is an extremely important detail. The munge key either in the slurm docker container or on a bare-metal slurm cluster *must* be the same munge.key in the slurm-jupyterlab deployment on k8s. If not, authentication from slurm-jupyterlab on k8s to the slurm cluster will fail with the following message:
 
 ![](https://user-images.githubusercontent.com/10785153/126519402-7a0e7679-2c15-4937-b883-d7bd87d090b1.png)
+
+Using the [test.slurm](https://github.com/hokiegeek2/slurm-cloud-integration/blob/master/src/tests/test.slurm) job, as successful job execution will look as follows in slurm-jupyterlab via terminal...
+
+![](https://user-images.githubusercontent.com/10785153/126484359-e991a0ee-808b-4df9-90b8-23062b73c387.png)
+
+...as well as this in slurm queue manager:
+
+![](https://user-images.githubusercontent.com/10785153/126497874-a2c6be77-8219-431a-b8c5-a8bf3b5824d9.png)
+
+...and finally this in slurm:
+
+![](https://user-images.githubusercontent.com/10785153/126484250-716e1dcb-5f36-43e9-abb7-4e4f7721adcd.png)
