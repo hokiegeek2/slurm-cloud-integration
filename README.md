@@ -34,15 +34,22 @@ The command sequence to start slurm-jupyterlab is contained within the [start-sl
 ```
 #!/bin/bash
 
-# start the munge authentication service
+# copy munge.key, set ownership and permissions, and move to config dir
+sudo cp /tmp/munge/munge.key /tmp/munge.key
+sudo mv /tmp/munge.key /etc/munge/munge.key
+sudo chown munge:munge /etc/munge/munge.key
+sudo chmod 400 /etc/munge/munge.key
+
+# start munge authorization service
 sudo service munge start
 
-# start jupyter lab with slurm-jupyterlab plugin
-jupyter lab --no-browser --allow-root --ip=0.0.0.0 --NotebookApp.token='' --NotebookApp.password=''
+jupyter lab --no-browser --allow-root --ip=0.0.0.0 --NotebookApp.token='' \
+            --NotebookApp.password=''
 
-# keep the docker image running
 tail -f /dev/null
 ```
+
+Note the munge.key handling section, which is required to handle the munge.key passed in at container startup. Specifically, the munge.key file must be owned by the munge user and the permissions must be 400.
 
 ## Deploying slurm-jupyterlab to Kubernetes
 
@@ -56,7 +63,7 @@ helm install -n slurm-integration slurm-jupyter-server deployment/charts/slurm-j
 In addition to the helm chart artifacts, the slurm-jupyterhub k8s deployment requires the _same_ munge.key used in the slurm cluster that the slurm-jupyterlab will connect to. The munge.key is used to create a Kubernetes secret that is mounted in the pod. The kubectl command is as follows:
 
 ```
-kubectl create secret generic slurm-munge-key --from-file=/munge.key -n slurm-integration
+kubectl create secret generic slurm-munge-key --from-file=munge.key -n slurm-integration
 ```
 
 The configuration logic for loading the k8s munge.key secret is in the slurm-jupyter [Helm template](https://github.com/hokiegeek2/slurm-cloud-integration/blob/master/deployment/charts/slurm-jupyter/templates/slurm-jupyter.yaml)
