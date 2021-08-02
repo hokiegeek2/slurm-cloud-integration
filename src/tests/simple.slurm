@@ -4,6 +4,7 @@
 #SBATCH --output=res.txt
 #SBATCH --mem=2300
 #SBATCH --ntasks=1
+#SBATCH --nodes=1
 #SBATCH --time=1:00
  
 srun hostname
