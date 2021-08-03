@@ -105,7 +105,6 @@ slurmctld:
   controller_addr: <controller ip address>
   
 slurmd:
-  node_name: <slurmd hostname/resources>
-  
+  node_name: <slurmd hostname/resources> # in the form of NodeName=<node names> NodeAddr=<node ip addresses> CPUs=<host vCPUs RealMemory=<host RAM>
 
       
