@@ -53,6 +53,15 @@ Note the munge.key handling section, which is required to handle the munge.key p
 
 ## Deploying slurm-jupyterlab to Kubernetes
 
+### Preparting for slurm-jupyterlab Deployment
+
+The munge.key configured for slurmctld needs to be added as a secret, which is accomplished as follows:
+
+```
+kubectl create secret generic slurm-munge-key --from-file=/tmp/munge.key -n slurm-integration
+```
+Importantly, in analogy to the slurmd workers, the munge.key _MUST_ be the same munge.key used in the munge service running on the slurmctld node. 
+
 Deploying slurm-jupyterlab is done via the slurm-jupyter [Docker image](https://hub.docker.com/repository/docker/hokiegeek2/slurm-jupyter) and the slurm-jupyter [Helm chart](https://github.com/hokiegeek2/slurm-cloud-integration/tree/master/deployment/charts/slurm-jupyter). 
 
 The helm command is executed as follows from the project root directory:
