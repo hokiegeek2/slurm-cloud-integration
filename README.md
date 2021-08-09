@@ -58,7 +58,13 @@ Note the munge.key handling section, which is required to handle the munge.key p
 The munge.key configured for slurmctld needs to be added as a secret, which is accomplished as follows:
 
 ```
+# Add secret encapsulating munge.key
 kubectl create secret generic slurm-munge-key --from-file=/tmp/munge.key -n slurm-integration
+
+# Confirm secret was created
+kubectl get secret -n slurm-integration
+NAME                                         TYPE                                  DATA   AGE
+slurm-munge-key                              Opaque                                1      18d
 ```
 Importantly, in analogy to the slurmd workers, the munge.key _MUST_ be the same munge.key used in the munge service running on the slurmctld node. 
 
