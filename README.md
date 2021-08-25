@@ -16,6 +16,12 @@ The slurm-single-node Docker image is built from the project root directory as f
 docker build -f src/docker/slurm-single-node -t hokiegeek2/slurm-single-node:$VERSION .
 ```
 
+Using a munge.key previously generated, start the slurm-single-node docker:
+
+```
+docker run -it --rm --network=host -v $PWD/munge.key:/tmp/munge.key hokiegeek2/slurm-single-node
+```
+
 Successful startup of slurm-single-node looks like this:
 
 ![](https://user-images.githubusercontent.com/10785153/126529217-e8df432b-c925-4155-af37-d00e9205cd16.png)
