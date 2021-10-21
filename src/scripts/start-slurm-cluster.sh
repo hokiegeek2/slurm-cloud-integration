@@ -1,8 +1,12 @@
 # Replace munge.key with munge.key file used in calling slurm client(s)
-sudo cp /tmp/munge.key /tmp/m.key
-sudo chown munge:munge /tmp/m.key
-sudo mv /tmp/m.key /etc/munge/munge.key
-sudo chmod 400 /etc/munge/munge.key
+FILE=/tmp/munge.key
+
+if test -f "$FILE"; then
+    sudo cp /tmp/munge.key /tmp/m.key
+    sudo chown munge:munge /tmp/m.key
+    sudo mv /tmp/m.key /etc/munge/munge.key
+    sudo chmod 400 /etc/munge/munge.key
+fi
 
 # Restart munge service to load replacement munge.key
 sudo service munge start
