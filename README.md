@@ -160,4 +160,4 @@ base64 /mnt/data/slurm/munge.key > /mnt/data/slurm/munge.key.b64
 ```
 # Testing 
 
-There are a couple of [test slurm files]() in this repo to confirm expected slurm job behavior from slurm-jupyter
+There are a couple of [test slurm files](https://github.com/hokiegeek2/slurm-cloud-integration/tree/master/src/tests) in this repo to confirm expected slurm job behavior from slurm-jupyter
