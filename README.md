@@ -135,3 +135,26 @@ Using the [test.slurm](https://github.com/hokiegeek2/slurm-cloud-integration/blo
 ...and finally this in slurm:
 
 ![](https://user-images.githubusercontent.com/10785153/126484250-716e1dcb-5f36-43e9-abb7-4e4f7721adcd.png)
+
+# Deploying slurm_jupyter in Jupyterhub on k8s
+
+## Mounting slurm.conf and munge.key files for slurm-jupyter Jupyterhub deployment on k8s
+
+### Background
+
+The Jupyterhub deployment of slurm-jupyter utilizes the [kubespawner](https://github.com/jupyterhub/kubespawner) which is configured via the [singleuser](https://github.com/jupyterhub/jupyterhub/tree/main/singleuser) section of the jupyterhub [values.yaml](https://github.com/jupyterhub/zero-to-jupyterhub-k8s/blob/main/jupyterhub/values.yaml) file.
+
+### Jupyterhub/slurm-jupyter Helm install
+
+As of 20211021, the way to mount the slurm.conf and munge.key file is done as follows within the helm install command:
+
+```
+helm install -n jupyter jupyterhub jhub --values config.yaml --set-file singleuser.extraFiles.slurm-conf.stringData=/mnt/data/slurm/slurm.conf --set-file singleuser.extraFiles.munge-key.binaryData=/mnt/data/slurm/munge.key.b64
+```
+### Preparing munge.key file for Jupyterhub/slurm-jupyter Helm install
+
+Note that the munge.key handling -> since it is a binary file, the following command must be run to generate the file submitted with the helm install:
+
+```
+base64 /mnt/data/slurm/munge.key > /mnt/data/slurm/munge.key.b64
+```
