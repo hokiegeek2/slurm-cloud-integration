@@ -64,7 +64,7 @@ Note the munge.key handling section, which is required to handle the munge.key p
 
 ## Deploying slurm-jupyterlab to Kubernetes
 
-### Preparting for slurm-jupyterlab Deployment
+### Preparing for slurm-jupyterlab Deployment
 
 The munge.key configured for slurmctld needs to be added as a secret, which is accomplished as follows:
 
@@ -138,9 +138,7 @@ Using the [test.slurm](https://github.com/hokiegeek2/slurm-cloud-integration/blo
 
 # Deploying slurm_jupyter in Jupyterhub on k8s
 
-## Mounting slurm.conf and munge.key files for slurm-jupyter Jupyterhub deployment on k8s
-
-### Background
+## Background
 
 The Jupyterhub deployment of slurm-jupyter utilizes the [kubespawner](https://github.com/jupyterhub/kubespawner) which is configured via the [singleuser](https://github.com/jupyterhub/jupyterhub/tree/main/singleuser) section of the jupyterhub [values.yaml](https://github.com/jupyterhub/zero-to-jupyterhub-k8s/blob/main/jupyterhub/values.yaml) file.
 
@@ -160,3 +158,6 @@ Note that the munge.key handling -> since it is a binary file, the following com
 ```
 base64 /mnt/data/slurm/munge.key > /mnt/data/slurm/munge.key.b64
 ```
+# Testing 
+
+There are a couple of [test slurm files]() in this repo to confirm expected slurm job behavior from slurm-jupyter
