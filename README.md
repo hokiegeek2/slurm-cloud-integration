@@ -144,10 +144,10 @@ The Jupyterhub deployment of slurm-jupyter utilizes the [kubespawner](https://gi
 
 ### Jupyterhub/slurm-jupyter Helm install
 
-As of 20211021, the way to mount the slurm.conf and munge.key file is done as follows within the helm install command:
+As of 20211021, the way to mount the slurm.conf and munge.key file is done as follows within the helm install command, which is executed from the $PROJECT_HOME/deployments/charts directory:
 
 ```
-helm install -n jupyter jupyterhub jhub --values config.yaml \
+helm install -n jupyter jupyterhub slurm-jupyterhub --values config.yaml \
 --set-file singleuser.extraFiles.slurm-conf.stringData=/mnt/data/slurm/slurm.conf \
 --set-file singleuser.extraFiles.munge-key.binaryData=/mnt/data/slurm/munge.key.b64
 ```
