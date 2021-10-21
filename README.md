@@ -8,12 +8,23 @@ The combination of the slurm-jupyter-docker and slurm-single-node Dockerfiles ar
 
 ## slurm-single-node: full stack, single-node Slurm in Docker
 
-The [slurm-single-node](https://github.com/hokiegeek2/slurm-cloud-integration/blob/master/src/docker/slurm-single-node) Dockerfile delivers an image that enables integration testing with a full Slurm stack w/ one worker (slurmd) node. This Dockerfile is based upon this excellent [example](https://blog.llandsmeer.com/tech/2020/03/02/slurm-single-instance.html)
+The [slurm-single-node](https://github.com/hokiegeek2/slurm-cloud-integration/blob/master/src/docker/slurm-single-node) Dockerfile delivers an image that enables integration testing with a full Slurm stack w/ one worker (slurmd) node. This Dockerfile is based upon this excellent [example](https://blog.llandsmeer.com/tech/2020/03/02/slurm-single-instance.html) written by Lennart Landsmeer.
 
 The slurm-single-node Docker image is built from the project root directory as follows:
 
 ```
 docker build -f src/docker/slurm-single-node -t hokiegeek2/slurm-single-node:$VERSION .
+```
+To simply run the slurm-single-node docker container, execute the following command:
+
+```
+docker run -it --rm --network=host hokiegeek2/slurm-single-node
+```
+
+In order to perform any integration testing with applications outside of the slurm-single-node, a munge.key used in the external app must be mounted into the docker container. Accordingly, to mount a munge.key and start the slurm-single-node docker container, execute the following command:
+
+```
+docker run -it --rm --network=host -v $PWD/munge.key:/tmp/munge.key hokiegeek2/slurm-single-node
 ```
 
 Successful startup of slurm-single-node looks like this:
@@ -34,17 +45,39 @@ The command sequence to start slurm-jupyterlab is contained within the [start-sl
 ```
 #!/bin/bash
 
-# start the munge authentication service
+# copy munge.key, set ownership and permissions, and move to config dir
+sudo cp /tmp/munge/munge.key /tmp/munge.key
+sudo mv /tmp/munge.key /etc/munge/munge.key
+sudo chown munge:munge /etc/munge/munge.key
+sudo chmod 400 /etc/munge/munge.key
+
+# start munge authorization service
 sudo service munge start
 
-# start jupyter lab with slurm-jupyterlab plugin
-jupyter lab --no-browser --allow-root --ip=0.0.0.0 --NotebookApp.token='' --NotebookApp.password=''
+jupyter lab --no-browser --allow-root --ip=0.0.0.0 --NotebookApp.token='' \
+            --NotebookApp.password=''
 
-# keep the docker image running
 tail -f /dev/null
 ```
 
+Note the munge.key handling section, which is required to handle the munge.key passed in at container startup. Specifically, the munge.key file must be owned by the munge user and the permissions must be 400.
+
 ## Deploying slurm-jupyterlab to Kubernetes
+
+### Preparing for slurm-jupyterlab Deployment
+
+The munge.key configured for slurmctld needs to be added as a secret, which is accomplished as follows:
+
+```
+# Add secret encapsulating munge.key
+kubectl create secret generic slurm-munge-key --from-file=/tmp/munge.key -n slurm-integration
+
+# Confirm secret was created
+kubectl get secret -n slurm-integration
+NAME                                         TYPE                                  DATA   AGE
+slurm-munge-key                              Opaque                                1      18d
+```
+Importantly, in analogy to the slurmd workers, the munge.key _MUST_ be the same munge.key used in the munge service running on the slurmctld node. 
 
 Deploying slurm-jupyterlab is done via the slurm-jupyter [Docker image](https://hub.docker.com/repository/docker/hokiegeek2/slurm-jupyter) and the slurm-jupyter [Helm chart](https://github.com/hokiegeek2/slurm-cloud-integration/tree/master/deployment/charts/slurm-jupyter). 
 
@@ -56,7 +89,7 @@ helm install -n slurm-integration slurm-jupyter-server deployment/charts/slurm-j
 In addition to the helm chart artifacts, the slurm-jupyterhub k8s deployment requires the _same_ munge.key used in the slurm cluster that the slurm-jupyterlab will connect to. The munge.key is used to create a Kubernetes secret that is mounted in the pod. The kubectl command is as follows:
 
 ```
-kubectl create secret generic slurm-munge-key --from-file=/munge.key -n slurm-integration
+kubectl create secret generic slurm-munge-key --from-file=munge.key -n slurm-integration
 ```
 
 The configuration logic for loading the k8s munge.key secret is in the slurm-jupyter [Helm template](https://github.com/hokiegeek2/slurm-cloud-integration/blob/master/deployment/charts/slurm-jupyter/templates/slurm-jupyter.yaml)
@@ -102,3 +135,29 @@ Using the [test.slurm](https://github.com/hokiegeek2/slurm-cloud-integration/blo
 ...and finally this in slurm:
 
 ![](https://user-images.githubusercontent.com/10785153/126484250-716e1dcb-5f36-43e9-abb7-4e4f7721adcd.png)
+
+# Deploying slurm_jupyter in Jupyterhub on k8s
+
+## Background
+
+The Jupyterhub deployment of slurm-jupyter utilizes the [kubespawner](https://github.com/jupyterhub/kubespawner) which is configured via the [singleuser](https://github.com/jupyterhub/jupyterhub/tree/main/singleuser) section of the jupyterhub [values.yaml](https://github.com/jupyterhub/zero-to-jupyterhub-k8s/blob/main/jupyterhub/values.yaml) file.
+
+### Jupyterhub/slurm-jupyter Helm install
+
+As of 20211021, the way to mount the slurm.conf and munge.key file is done as follows within the helm install command:
+
+```
+helm install -n jupyter jupyterhub jhub --values config.yaml \
+--set-file singleuser.extraFiles.slurm-conf.stringData=/mnt/data/slurm/slurm.conf \
+--set-file singleuser.extraFiles.munge-key.binaryData=/mnt/data/slurm/munge.key.b64
+```
+### Preparing munge.key file for Jupyterhub/slurm-jupyter Helm install
+
+Note that the munge.key handling -> since it is a binary file, the following command must be run to generate the file submitted with the helm install:
+
+```
+base64 /mnt/data/slurm/munge.key > /mnt/data/slurm/munge.key.b64
+```
+# Testing 
+
+There are a couple of [test slurm files](https://github.com/hokiegeek2/slurm-cloud-integration/tree/master/src/tests) in this repo to confirm expected slurm job behavior from slurm-jupyter
