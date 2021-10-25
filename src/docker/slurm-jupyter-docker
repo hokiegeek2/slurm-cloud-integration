@@ -19,7 +19,7 @@ RUN apt-get update && apt install nodejs -y
 RUN apt-get update && apt install npm  -y 
 RUN npm install -g configurable-http-proxy
 
-RUN pip3 install jupyterlab==2.1.2 && pip3 install jupyterlab_slurm
+RUN pip3 install jupyterlab==2.1.2 && pip3 install jupyterlab_slurm==2.0.0
 RUN jupyter labextension install jupyterlab-slurm
 
 ADD src/scripts/start-slurm-jupyter.sh /tmp/start-slurm-jupyter.sh
