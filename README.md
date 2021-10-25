@@ -144,7 +144,17 @@ The Jupyterhub deployment of slurm-jupyter utilizes the [kubespawner](https://gi
 
 ### Jupyterhub/slurm-jupyter Helm install
 
+slurm-jupyter can be deployed as a singleuser image within a k8s jupyterhub install
+
+#### Building slurm-jupyter singleuser image
+
+```
+docker build -f src/docker/slurm-jupyter-notebook -t hokiegeek2/slurm-jupyter-notebook:$VERSION .
+```
+
 As of 20211021, the way to mount the slurm.conf and munge.key file is done as follows within the helm install command, which is executed from the $PROJECT_HOME/deployments/charts directory:
+
+Using a [fork](https://github.com/hokiegeek2/slurm-cloud-integration/tree/master/deployment/charts/slurm-jupyterhub) of the [zero-to-jupyterhub-k8s](https://github.com/jupyterhub/zero-to-jupyterhub-k8s) helm chart, the deployment is as follows:
 
 ```
 helm install -n jupyter jupyterhub slurm-jupyterhub --values config.yaml \
