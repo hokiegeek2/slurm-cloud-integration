@@ -32,9 +32,12 @@ WORKDIR /storage
 RUN wget https://download.schedmd.com/slurm/slurm-20.02.7.tar.bz2
 RUN tar xvf slurm-20.02.7.tar.bz2
 WORKDIR /storage/slurm-20.02.7
+
+RUN apt-get install libhttp-parser-dev libjwt-dev libyaml-dev libjson-c-dev -y
+
 RUN ./configure --prefix=/storage/slurm-build --sysconfdir=/etc/slurm --enable-pam \
-    --with-pam_dir=/lib/x86_64-linux-gnu/security/ --without-shared-libslurm
-RUN make
+    --with-pam_dir=/lib/x86_64-linux-gnu/security/ --without-shared-libslurm --enable-slurmrestd 
+RUN make 
 RUN make contrib
 RUN make install
 
