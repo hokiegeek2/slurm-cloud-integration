@@ -31,6 +31,14 @@ Successful startup of slurm-single-node looks like this:
 
 ![](https://user-images.githubusercontent.com/10785153/126529217-e8df432b-c925-4155-af37-d00e9205cd16.png)
 
+### Troubleshooting
+
+If the munge keys don't match, the following error occurs:
+
+```
+slurmctld: fatal: You are running with a database but for some reason we have no TRES from it.  This should only happen if the database is down and you don't have any state files.
+```
+
 ## slurm-jupyterlab on k8s
 The [slurm-jupyter-docker](https://github.com/hokiegeek2/slurm-cloud-integration/blob/master/src/docker/slurm-jupyter-docker) Dockerfile and slurm-jupyter [Helm chart](https://github.com/hokiegeek2/slurm-cloud-integration/tree/master/deployment/charts/slurm-jupyter) enables deployment of the awesome [NERSC](https://github.com/NERSC) [jupyterlab-slurm](https://github.com/NERSC/jupyterlab-slurm) application to Kubernetes. 
 
