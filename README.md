@@ -176,6 +176,158 @@ Note that the munge.key handling -> since it is a binary file, the following com
 ```
 base64 /mnt/data/slurm/munge.key > /mnt/data/slurm/munge.key.b64
 ```
+
 # Testing 
 
-There are a couple of [test slurm files](https://github.com/hokiegeek2/slurm-cloud-integration/tree/master/src/tests) in this repo to confirm expected slurm job behavior from slurm-jupyter
+There are a couple of [test slurm files](https://github.com/hokiegeek2/slurm-cloud-integration/tree/master/src/tests) in this repo to confirm expected slurm job behavior from slurm-jupyter.
+
+# slurmrestd Integration
+
+## Background
+
+The [slurmrestd](https://slurm.schedmd.com/slurmrestd.html) service provides a REST endpoint to perform operations against slurm. An important benefit of slurmrestd is that it obviates the need to configure and deploy slurm libraries to clients that need slurm access.
+
+## Steps to Enable slurmrestd 
+
+### Install slurmrestd Dependencies
+
+As shown in the [slurm-single-node](src/docker/slurm-single-node) docker file, the following slurmrestd dependencies must be installed:
+
+```
+sudo apt-get update && apt-get install cmake libhttp-parser-dev libjwt-dev libyaml-dev libjson-c-dev -y
+```
+
+### Build slurmctld with slurmrestd Support
+
+As shown in the [slurm-single-node](src/docker/slurm-single-node) docker file, slurm needs to be configured for slurmrestd via the $SLURM_PROJECT_DIRECTORY/configure command:
+
+```
+./configure --prefix=/storage/slurm-build --sysconfdir=/etc/slurm --enable-pam \
+    --with-pam_dir=/lib/x86_64-linux-gnu/security/ --without-shared-libslurm \
+    --with-http-parser=/usr/local/ --with-yaml=/usr/local/ --with-jwt=/usr/local/lib/ --enable-slurmrestd 
+```
+
+### Update slurmctld with to Enable jwt Authentication
+
+Since slurmrestd uses [Json Web Token](https://jwt.io/introduction) for authentication, jwt has to be added as 
+an alternative authentiation type in the slurm.conf file as detailed [here](https://slurm.schedmd.com/jwt.html):
+
+```
+AuthAltTypes=auth/jwt
+AuthAltParameters=jwt_key=/etc/slurm/jwt_hs256.key
+```
+
+### Generate and Set Permissions for jwt key
+
+Now that slurmctld is built and configured for jwt authentication, generate the jwt key to be used by slurmctld and slurmrestd and set the permissions. For Linux, the jwt key is generated as follows:
+
+```
+dd if=/dev/random of=/etc/slurm/jwt_hs256.key bs=32 count=1
+```
+
+Set the ownership and permissions for the jwt key:
+
+```
+chown slurm:slurm /etc/slurm/jwt_hs256.key
+chmod 600 /etc/slurm/jwt_hs256.key
+```
+
+## Running slurmrestd
+
+### Start slurmctld with JWT Authentication
+
+Now that slurmctld is configured for alternate, jwt authentication, start slurmctd.
+
+### Start slurmrestd
+
+The slurmrestd daemon is started as follows:
+
+```
+export SLURMRESTD_HOST=0.0.0.0
+export SLURMRESTD_PORT=6820
+export SLURM_JWT=daemon
+
+slurmrestd -vvvv -a rest_auth/jwt $SLURMRESTD_HOST:$SLURMRESTD_PORT
+```
+
+The following log message shows that slurmrestd was successfully started with jwt authentication enabled:
+
+```
+slurmrestd: debug:  main: server listen mode activated
+slurmrestd: debug3: Trying to load plugin /usr/lib/slurm/auth_jwt.so
+slurmrestd: debug:  auth/jwt: init: JWT authentication plugin loaded
+slurmrestd: debug3: Success.
+```
+
+### Accessing slurmrestd
+
+#### Generate JWT Token for User
+
+Each user accessing slurmrestd must have a JWT token, which is generatedf by scontrol:
+
+```
+$ scontrol token
+SLURM_JWT=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJleHAiOjE2NDE4MjMxODYsImlhdCI6MTY0MTgyMTM4Niwic3VuIjoic2x1cm0ifQ.Rc6BIFHAMlZsLQVBAgN-8kPFw5Onc5kWgqMCG287WSc
+```
+
+#### Execute slurmrestd Request
+
+Export the jwt token as an env variable named SLURM_JWT and execute the slurmrestd command with the following, general structure:
+
+```
+export SLURM_JWT=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJleHAiOjE2NDE4MjMxODYsImlhdCI6MTY0MTgyMTM4Niwic3VuIjoic2x1cm0ifQ.Rc6BIFHAMlZsLQVBAgN-8kPFw5Onc5kWgqMCG287WSc
+
+
+export SLURMRESTD_HOST=0.0.0.0
+export SLURMRESTD_PORT=6820
+
+curl -H "X-SLURM-USER-NAME:slurm" -H "X-SLURM-USER-TOKEN:${SLURM_JWT}" http://$SLURMRESTD_HOST:$SLURMRESTD_PORT
+```
+
+
+
+```
+$ curl -H "X-SLURM-USER-NAME:slurm" -H "X-SLURM-USER-TOKEN:${SLURM_JWT}" http://localhost:6820/slurm/v0.0.36/ping
+{
+   "meta": {
+     "plugin": {
+       "type": "openapi\/v0.0.36",
+       "name": "REST v0.0.36"
+     },
+     "Slurm": {
+       "version": {
+         "major": 20,
+         "micro": 8,
+         "minor": 11
+       },
+       "release": "20.11.8"
+     }
+   },
+   "errors": [
+   ],
+   "pings": [
+     {
+       "hostname": "e1968f80260d",
+       "ping": "UP",
+       "status": 0,
+       "mode": "primary"
+     }
+   ]
+ }
+```
+
+The slurmrestd server-side debug logging on the above request is similar to the following:
+
+```
+slurmrestd: debug3: _on_headers_complete: [[localhost]:39180] HTTP/1.1 connection
+slurmrestd: operations_router: [[localhost]:39180] GET /slurm/v0.0.36/ping
+slurmrestd: debug3: rest_auth/jwt: slurm_rest_auth_p_authenticate: slurm_rest_auth_p_authenticate: [[localhost]:39180] attempting user_name slurm token authentication
+slurmrestd: debug3: _resolve_mime: [[localhost]:39180] mime read: application/x-www-form-urlencoded write: application/json
+slurmrestd: debug:  parse_http: [[localhost]:39674] Accepted HTTP connection
+slurmrestd: debug:  _on_url: [[localhost]:39674] url path: /slurm/v0.0.36/ping query: (null)
+slurmrestd: debug2: _on_header_value: [[localhost]:39674] Header: Host Value: localhost:6820
+slurmrestd: debug2: _on_header_value: [[localhost]:39674] Header: User-Agent Value: curl/7.58.0
+slurmrestd: debug2: _on_header_value: [[localhost]:39674] Header: Accept Value: */*
+slurmrestd: debug2: _on_header_value: [[localhost]:39674] Header: X-SLURM-USER-NAME Value: slurm
+slurmrestd: debug2: _on_header_value: [[localhost]:39674] Header: X-SLURM-USER-TOKEN Value: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJleHAiOjE2NDE4MjMxODYsImlhdCI6MTY0MTgyMTM4Niwic3VuIjoic2x1cm0ifQ.Rc6BIFHAMlZsLQVBAgN-8kPFw5Onc5kWgqMCG287WSc
+```
