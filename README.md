@@ -199,9 +199,9 @@ As shown in the [slurm-single-node](src/docker/slurm-single-node) docker file, t
 sudo apt-get update && apt-get install cmake libhttp-parser-dev libjwt-dev libyaml-dev libjson-c-dev -y
 ```
 
-### Build slurmctld and slurmdbd with slurmrestd Support
+### Build slurm with slurmrestd Support
 
-As shown in the [slurm-single-node](src/docker/slurm-single-node) docker file, slurmctld and slurmdbd need to be configured for slurmrestd via the $SLURM_PROJECT_DIRECTORY/configure command:
+As shown in the [slurm-single-node](src/docker/slurm-single-node) docker file, the slurm build needs to be configured to (1) build slurmrestd and (2) link to the slurmrestd dependent libraries (http-parser, yaml, and jwt via the $SLURM_PROJECT_DIRECTORY/configure command:
 
 ```
 ./configure --prefix=/storage/slurm-build --sysconfdir=/etc/slurm --enable-pam \
@@ -209,7 +209,7 @@ As shown in the [slurm-single-node](src/docker/slurm-single-node) docker file, s
     --with-http-parser=/usr/local/ --with-yaml=/usr/local/ --with-jwt=/usr/local/lib/ --enable-slurmrestd 
 ```
 
-### Update slurmctld with to Enable jwt Authentication
+### Update slurmctld and slurmdbd to Enable jwt Authentication
 
 Since slurmrestd uses [Json Web Token](https://jwt.io/introduction) for authentication, jwt has to be added as 
 an alternative authentiation type in both the slurm.conf and slurmdbd.conf files as detailed [here](https://slurm.schedmd.com/jwt.html):
@@ -221,7 +221,7 @@ AuthAltParameters=jwt_key=/etc/slurm/jwt_hs256.key
 
 ### Generate and Set Permissions for jwt key
 
-Now that slurmctld and slurmdbd are built and configured for jwt authentication, generate the jwt key to be used by slurmctld, slurmdbd, and slurmrestd and set the permissions. For Linux, the jwt key is generated as follows:
+Now that slurmctld and slurmdbd are built and configured for jwt authentication, generate the jwt key to be used by slurmctld and slurmdbd to verify user tokens submitted with each slurmrestd REST call and set the permissions. For Linux, the jwt key is generated as follows:
 
 ```
 dd if=/dev/random of=/etc/slurm/jwt_hs256.key bs=32 count=1
@@ -242,7 +242,7 @@ Now that slurmctld and slurmdbd are configured for alternate, jwt authentication
 
 ### Start slurmrestd
 
-The slurmrestd daemon is started as follows:
+The slurmrestd daemon is started as follows (note the SLURM_JWT=daemon env variable)
 
 ```
 export SLURMRESTD_HOST=0.0.0.0
