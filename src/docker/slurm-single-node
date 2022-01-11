@@ -68,7 +68,7 @@ RUN cp ubuntu-slurm/slurmdbd.conf /etc/slurm/
 RUN chown slurm /var/spool/slurm/ctld /var/spool/slurm/d /var/log/slurm /var/run/slurm
 
 RUN rm -rf slurm-20.11.8.tar.bz2
-RUN rm -rf slurm-20.11.8_amd64.deb 
+RUN rm -rf slurm-20.11.8_1.0_amd64.deb 
 
 # Generate slurm jwt key and set ownership/permissions
 RUN dd if=/dev/random of=/etc/slurm/jwt_hs256.key bs=32 count=1
@@ -84,5 +84,8 @@ COPY src/scripts/start-slurm-cluster.sh start-slurm-cluster.sh
 COPY src/scripts/start-slurmrestd.sh start-slurmrestd.sh
 
 COPY src/conf/single-node-slurm.conf /etc/slurm/slurm.conf
+COPY src/conf/single-node-slurmdbd.conf /etc/slurm/slurmdbd.conf
+RUN chmod 600 /etc/slurm/slurmdbd.conf
+RUN chown slurm:slurm /etc/slurm/slurmdbd.conf
 
 ENTRYPOINT sh start-slurm-cluster.sh

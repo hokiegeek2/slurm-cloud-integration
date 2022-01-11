@@ -18,8 +18,10 @@ docker build -f src/docker/slurm-single-node -t hokiegeek2/slurm-single-node:$VE
 To simply run the slurm-single-node docker container, execute the following command:
 
 ```
-docker run -it --rm --network=host hokiegeek2/slurm-single-node
+docker run -it --rm --network=host --privileged hokiegeek2/slurm-single-node
 ```
+
+Note: running the docker container in privileged mode is required to run slurmrestd
 
 In order to perform any integration testing with applications outside of the slurm-single-node, a munge.key used in the external app must be mounted into the docker container. Accordingly, to mount a munge.key and start the slurm-single-node docker container, execute the following command:
 
