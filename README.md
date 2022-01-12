@@ -201,7 +201,7 @@ sudo apt-get update && apt-get install cmake libhttp-parser-dev libjwt-dev libya
 
 ### Build slurm with slurmrestd Support
 
-As shown in the [slurm-single-node](src/docker/slurm-single-node) docker file, the slurm build needs to be configured to (1) build slurmrestd and (2) link to the slurmrestd dependent libraries (http-parser, yaml, and jwt via the $SLURM_PROJECT_DIRECTORY/configure command:
+As shown in the [slurm-single-node](src/docker/slurm-single-node) docker file, the slurm build needs to be configured to (1) build slurmrestd and (2) link to the slurmrestd dependent libraries (http-parser, yaml, and jwt) via the $SLURM_PROJECT_DIRECTORY/configure command:
 
 ```
 ./configure --prefix=/storage/slurm-build --sysconfdir=/etc/slurm --enable-pam \
