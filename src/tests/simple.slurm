@@ -2,7 +2,7 @@
 #
 #SBATCH --job-name=test
 #SBATCH --output=res.txt
-#SBATCH --mem=2300
+#SBATCH --mem=500
 #SBATCH --ntasks=1
 #SBATCH --nodes=1
 #SBATCH --time=1:00
