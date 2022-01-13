@@ -38,7 +38,7 @@ WORKDIR /storage/slurm-20.11.8
 # Configure slurm with slurmrestd support
 RUN ./configure --prefix=/storage/slurm-build --sysconfdir=/etc/slurm --enable-pam \
     --with-pam_dir=/lib/x86_64-linux-gnu/security/ --without-shared-libslurm \
-    --with-http-parser=/usr/local/ --with-yaml=/usr/local/ --with-jwt=/usr/local/lib/ \
+    --with-http-parser=/usr/ --with-yaml=/usr/ --with-jwt=/usr/ \
     --enable-slurmrestd 
 RUN make 
 RUN make contrib
