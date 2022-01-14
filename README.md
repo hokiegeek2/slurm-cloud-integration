@@ -333,3 +333,20 @@ slurmrestd: debug2: _on_header_value: [[localhost]:39674] Header: Accept Value: 
 slurmrestd: debug2: _on_header_value: [[localhost]:39674] Header: X-SLURM-USER-NAME Value: slurm
 slurmrestd: debug2: _on_header_value: [[localhost]:39674] Header: X-SLURM-USER-TOKEN Value: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJleHAiOjE2NDE4MjMxODYsImlhdCI6MTY0MTgyMTM4Niwic3VuIjoic2x1cm0ifQ.Rc6BIFHAMlZsLQVBAgN-8kPFw5Onc5kWgqMCG287WSc
 ```
+
+# Slurm Administration Notes
+
+## Upgrade
+
+The current version of slurm needs to be removed prior to installing the new version. The command for removing slurm is as follows:
+
+```
+# get slurm version
+slurmctld -V 
+slurm-20.02.7
+
+# remove all slurm components
+dpkg -P slurm-20.02.7
+```
+
+Once the previous version of slurm is removed, proceed with the standard slurm install instructions
