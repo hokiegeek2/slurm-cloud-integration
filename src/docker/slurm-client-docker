@@ -25,41 +25,28 @@ COPY src/scripts/initialize-mariadb.sh /tmp/initialize-mariadb.sh
 RUN service mysql start
 RUN service munge start
 
-# Install slurmrestd dependencies except libjwt
-RUN apt-get install cmake libhttp-parser-dev libyaml-dev libjson-c-dev -y
-
-# Install libjwt
-RUN apt-get install autoconf automake autotools-dev libtool -y
-
-RUN git clone --depth 1 --single-branch -b v1.12.0 https://github.com/benmcollins/libjwt.git libjwt
-RUN cd libjwt
-RUN autoreconf --force --install
-RUN apt-get install pkg-config -y 
-RUN autoreconf --force --install
-RUN apt-get install -y libjansson-dev
-RUN ./configure --prefix=/usr/
-RUN make -j
-RUN make install
+# Install slurmrestd Dependencies
+RUN apt-get install cmake libhttp-parser-dev libjwt-dev libyaml-dev libjson-c-dev -y
 
 RUN mkdir /storage
 WORKDIR /storage
 
-RUN wget https://download.schedmd.com/slurm/slurm-21.08.5.tar.bz2
-RUN tar xvf slurm-21.08.5.tar.bz2
-WORKDIR /storage/slurm-21.08.5
+RUN wget https://download.schedmd.com/slurm/slurm-20.02.7.tar.bz2
+RUN tar xvf slurm-20.02.7.tar.bz2
+WORKDIR /storage/slurm-20.02.7
 
+# Configure slurm with slurmrestd support
 RUN ./configure --prefix=/storage/slurm-build --sysconfdir=/etc/slurm --enable-pam \
     --with-pam_dir=/lib/x86_64-linux-gnu/security/ --without-shared-libslurm \
-    --with-http-parser=/usr/ --with-yaml=/usr/ --with-jwt=/usr/ \
+    --with-http-parser=/usr/local/ --with-yaml=/usr/local/ --with-jwt=/usr/local/lib/ \
     --enable-slurmrestd 
-
 RUN make 
 RUN make contrib
 RUN make install
 
 WORKDIR /storage
-RUN fpm -s dir -t deb -v 1.0 -n slurm-21.08.5 --prefix=/usr -C /storage/slurm-build .
-RUN dpkg -i slurm-21.08.5_1.0_amd64.deb
+RUN fpm -s dir -t deb -v 1.0 -n slurm-20.02.7 --prefix=/usr -C /storage/slurm-build .
+RUN dpkg -i slurm-20.02.7_1.0_amd64.deb
 
 # Add the slurm user
 RUN useradd -m -u 1004 slurm
@@ -80,23 +67,10 @@ RUN cp ubuntu-slurm/slurmdbd.conf /etc/slurm/
 
 RUN chown slurm /var/spool/slurm/ctld /var/spool/slurm/d /var/log/slurm /var/run/slurm
 
-RUN rm -rf slurm-21.08.5.tar.bz2
-RUN rm -rf slurm-21.08.5_1.0_amd64.deb 
+RUN rm -rf slurm-20.02.7.tar.bz2
+RUN rm -rf slurm-20.02.7_1.0_amd64.deb
 
-# Generate slurm jwt key and set ownership/permissions
-RUN dd if=/dev/random of=/etc/slurm/jwt_hs256.key bs=32 count=1
-RUN chown slurm:slurm /etc/slurm/jwt_hs256.key
-RUN chmod 600 /etc/slurm/jwt_hs256.key
-
-COPY src/scripts/initialize-mariadb.sh initialize-mariadb.sh
-COPY src/scripts/start-slurm-cluster.sh start-slurm-cluster.sh
+COPY src/scripts/start-slurm-client.sh start-slurm-client.sh
 COPY src/scripts/start-slurmrestd.sh start-slurmrestd.sh
 
-COPY src/conf/single-node-slurm.conf /etc/slurm/slurm.conf
-COPY src/conf/single-node-slurmdbd.conf /etc/slurm/slurmdbd.conf
-
-# Set ownership/permissions for slurmudb (as of 20.11.8)
-RUN chmod 600 /etc/slurm/slurmdbd.conf
-RUN chown slurm:slurm /etc/slurm/slurmdbd.conf
-
-ENTRYPOINT sh start-slurm-cluster.sh
+ENTRYPOINT sh start-slurm-client.sh

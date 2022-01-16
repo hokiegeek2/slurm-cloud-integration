@@ -33,6 +33,22 @@ Successful startup of slurm-single-node looks like this:
 
 ![](https://user-images.githubusercontent.com/10785153/126529217-e8df432b-c925-4155-af37-d00e9205cd16.png)
 
+### Slurm Client Docker
+
+The slurm-client-docker serves as a base Docker image to build slurm client images such as slurmrestd where the node is neither the slurm controller (slurmctld) or slurm worker (slurmd)
+
+Building the slurm-client-docker is as follows:
+
+```
+docker build -f src/docker/slurm-client-docker -t hokiegeek2/slurm-client-docker .
+```
+
+Running the slurm-client-docker is as follows:
+
+```
+docker run -it --rm --entrypoint=bash -v /tmp/munge.key:/tmp/munge/munge.key -v /tmp/slurm.conf:/etc/slurm/slurm.conf -v /tmp/slurmdbd.conf:/etc/slurm/slurmdbd.conf -v /tmp/jwt_hs256.key:/etc/slurm/jwt_hs256.key --network=host hokiegeek2/slurm-client-docker
+```
+
 ### Troubleshooting
 
 If the munge keys don't match, the following error occurs:
