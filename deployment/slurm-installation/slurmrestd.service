@@ -1,0 +1,19 @@
+[Unit]
+Description=Slurm REST daemon
+After=network.target munge.service slurmctld.service
+ConditionPathExists=/etc/slurm/slurm.conf
+Documentation=man:slurmrestd(8)
+
+[Service]
+Type=simple
+User=slurmrestd
+EnvironmentFile=-/etc/default/slurmrestd
+# Default to local auth via socket
+#ExecStart=/usr/sbin/slurmrestd $SLURMRESTD_OPTIONS unix:/run/slurmrestd.socket
+# Uncomment to enable listening mode
+Environment="SLURM_JWT=daemon"
+ExecStart=/usr/sbin/slurmrestd $SLURMRESTD_OPTIONS -vvvvv 0.0.0.0:6820
+ExecReload=/bin/kill -HUP $MAINPID
+
+[Install]
+WantedBy=multi-user.target
