@@ -32,7 +32,7 @@ RUN apt-get install cmake libhttp-parser-dev libyaml-dev libjson-c-dev -y
 RUN apt-get install autoconf automake autotools-dev libtool -y
 
 RUN git clone --depth 1 --single-branch -b v1.12.0 https://github.com/benmcollins/libjwt.git libjwt
-RUN cd libjwt
+WORKDIR libjwt
 RUN autoreconf --force --install
 RUN apt-get install pkg-config -y 
 RUN autoreconf --force --install
