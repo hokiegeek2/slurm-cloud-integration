@@ -1,7 +1,7 @@
 FROM ubuntu:18.04 as slurm-build
 
 CMD ["/bin/bash"]
-
+ENV DEBIAN_FRONTEND=noninteractive
 # Install all base dependencies
 RUN apt-get update && apt install sudo git gcc make ruby ruby-dev python3 \
     libpam0g-dev libmariadb-client-lgpl-dev libmysqlclient-dev wget vim curl -y
@@ -15,10 +15,11 @@ RUN apt-get install libmunge-dev libmunge2 munge -y
 # Install hdf5
 RUN apt-get install libhdf5-serial-dev hdf5-tools -y
 
+
 # Install slurmrestd dependencies except libjwt
 RUN apt-get install cmake libhttp-parser-dev libyaml-dev libjson-c-dev -y
 
-# Install libjwt - requires build of static lib for slurm
+# Install libjwt  - [theory] requires build of static lib for slurm
 RUN apt-get install autoconf automake autotools-dev libtool -y
 
 RUN mkdir /storage
