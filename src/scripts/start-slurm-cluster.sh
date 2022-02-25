@@ -8,6 +8,7 @@ if test -f "$FILE"; then
     sudo chmod 400 /etc/munge/munge.key
 fi
 
+ls -la /etc/munge
 # Restart munge service to load replacement munge.key
 sudo service munge start
 
@@ -17,8 +18,14 @@ sudo service slurmdbd start
 sudo mysql -u root < initialize-mariadb.sh
 
 # Start slurmd worker
-slurmd
+#slurmd
+echo 'starting slurmd'
+service slurmd start
 
 # Sleep for 10 seconds to prevent race condition, then start slurmctld controller
 sleep 10
+#sudo -u slurm slurmctld -D
+echo 'starting slurmrestd'
+sudo -u slurmrestd sh /start-slurmrestd.sh &
+echo 'starting slurmctld'
 slurmctld -D
