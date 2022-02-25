@@ -1,0 +1,82 @@
+FROM centos:centos7 
+
+RUN yum update -y && yum install cmake git autoconf automake libtool libyaml-devel \
+    http-parser-devel json-c-devel jansson-devel openssl openssl-devel bzip2 pam libjwt \
+    perl-devel python3 wget -y
+
+RUN useradd -m -u 1004 slurm && useradd -m -u 1005 slurmrestd
+
+RUN yum install epel-release -y && yum install munge munge-libs munge-devel -y
+
+RUN yum install mariadb-server mariadb-devel -y
+
+RUN git clone --depth 1 --single-branch -b v1.12.0 https://github.com/benmcollins/libjwt.git \
+    libjwt
+WORKDIR libjwt
+RUN autoreconf --force --install
+RUN ./configure --prefix=/usr/
+RUN make -j && make install
+
+RUN mkdir /storage
+WORKDIR /storage
+RUN wget https://download.schedmd.com/slurm/slurm-21.08.5.tar.bz2
+RUN tar -xvf slurm-21.08.5.tar.bz2 && cd slurm-21.08.5
+WORKDIR /storage/slurm-21.08.5
+RUN ./configure --prefix=/storage/slurm-build --sysconfdir=/etc/slurm --enable-pam  \
+                --with-pam_dir=/usr/lib64/security/ --without-shared-libslurm \
+                --with-http-parser=/usr/ --with-yaml=/usr/ --with-jwt=/usr/ --enable-slurmrestd
+
+RUN make && make contrib && make install
+WORKDIR /storage
+RUN cp slurm-build/bin/* /usr/bin && cp slurm-build/sbin/* /usr/sbin \
+    && cp -R slurm-build/lib/* /usr/lib/
+
+RUN git clone https://github.com/mknoxnv/ubuntu-slurm.git
+RUN cp ubuntu-slurm/slurmd.init /etc/init.d/slurmd
+RUN chmod 755 /etc/init.d/slurmd
+RUN cp ubuntu-slurm/slurmd.service /etc/systemd/system/
+RUN cp ubuntu-slurm/slurmdbd.init /etc/init.d/slurmdbd
+RUN chmod 755 /etc/init.d/slurmdbd
+RUN cp ubuntu-slurm/slurmdbd.service /etc/systemd/system/
+
+RUN mkdir -p /etc/slurm /etc/slurm/prolog.d /etc/slurm/epilog.d /var/spool/slurm/ctld \
+    /var/spool/slurm/d /var/log/slurm /var/run/slurm
+RUN chown slurm /var/spool/slurm/ctld /var/spool/slurm/d /var/log/slurm /var/run/slurm
+
+# Generate and configure JWT HS256 key
+RUN dd if=/dev/random of=/etc/slurm/jwt_hs256.key bs=32 count=1
+RUN chown slurm:slurm /etc/slurm/jwt_hs256.key
+RUN chmod 600 /etc/slurm/jwt_hs256.key
+
+# Copy and configure slurm conf files
+COPY src/conf/single-node-slurm.conf /etc/slurm/slurm.conf
+RUN chown slurm:slurm /etc/slurm/slurm.conf
+COPY src/conf/single-node-slurmdbd.conf /etc/slurm/slurmdbd.conf
+RUN chown slurm:slurm /etc/slurm/slurmdbd.conf && chmod 600 /etc/slurm/slurmdbd.conf 
+
+# Copy slurm service files
+COPY deployment/slurm-installation/slurmctld.service /etc/systemd/system/slurmctld.service
+COPY deployment/slurm-installation/slurmd.service /etc/systemd/system/slurmd.service
+COPY deployment/slurm-installation/slurmrestd.service /etc/systemd/system/slurmrestd.service
+
+COPY src/scripts/initialize-mariadb.sh /tmp/initialize-mariadb.sh
+
+RUN dd if=/dev/urandom bs=1 count=1024 > /etc/munge/munge.key
+RUN chown munge: /etc/munge/munge.key && chmod 600 /etc/munge/munge.key
+
+WORKDIR /storage
+
+# Add special utility to enable systemctl calls in centos docker images/contaoiners
+RUN wget https://raw.githubusercontent.com/gdraheim/docker-systemctl-replacement/master/files/docker/systemctl.py
+RUN mv systemctl.py /usr/bin/systemctl
+RUN chmod a+x /usr/bin/systemctl
+
+RUN systemctl enable slurmdbd.service && systemctl enable slurmctld.service && \
+    systemctl enable slurmd.service && systemctl enable mariadb
+
+RUN cp /usr/lib/libjwt* /usr/lib64/
+
+COPY src/scripts/start-centos-slurm-cluster.sh /tmp/start-slurm-cluster.sh
+
+WORKDIR /tmp
+ENTRYPOINT sh start-slurm-cluster.sh
