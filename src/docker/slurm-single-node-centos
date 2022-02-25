@@ -1,7 +1,7 @@
 FROM centos:centos7 
 
 RUN yum update -y && yum install cmake git autoconf automake libtool libyaml-devel \
-    http-parser-devel json-c-devel jansson-devel openssl openssl-devel bzip2 pam libjwt \
+    http-parser-devel json-c-devel jansson-devel openssl openssl-devel bzip2 pam \
     perl-devel python3 wget -y
 
 RUN useradd -m -u 1004 slurm && useradd -m -u 1005 slurmrestd
@@ -14,7 +14,7 @@ RUN git clone --depth 1 --single-branch -b v1.12.0 https://github.com/benmcollin
     libjwt
 WORKDIR libjwt
 RUN autoreconf --force --install
-RUN ./configure --prefix=/usr/
+RUN ./configure --prefix=/usr/lib64
 RUN make -j && make install
 
 RUN mkdir /storage
@@ -24,7 +24,7 @@ RUN tar -xvf slurm-21.08.5.tar.bz2 && cd slurm-21.08.5
 WORKDIR /storage/slurm-21.08.5
 RUN ./configure --prefix=/storage/slurm-build --sysconfdir=/etc/slurm --enable-pam  \
                 --with-pam_dir=/usr/lib64/security/ --without-shared-libslurm \
-                --with-http-parser=/usr/ --with-yaml=/usr/ --with-jwt=/usr/ --enable-slurmrestd
+                --with-http-parser=/usr/ --with-yaml=/usr/ --with-jwt=/usr/lib64 --enable-slurmrestd
 
 RUN make && make contrib && make install
 WORKDIR /storage
@@ -61,8 +61,8 @@ COPY deployment/slurm-installation/slurmrestd.service /etc/systemd/system/slurmr
 
 COPY src/scripts/initialize-mariadb.sh /tmp/initialize-mariadb.sh
 
-RUN dd if=/dev/urandom bs=1 count=1024 > /etc/munge/munge.key
-RUN chown munge: /etc/munge/munge.key && chmod 600 /etc/munge/munge.key
+RUN dd if=/dev/urandom bs=1 count=1024 > /etc/munge/munge.key && chown munge: /etc/munge/munge.key \
+    && chmod 600 /etc/munge/munge.key
 
 WORKDIR /storage
 
@@ -73,8 +73,6 @@ RUN chmod a+x /usr/bin/systemctl
 
 RUN systemctl enable slurmdbd.service && systemctl enable slurmctld.service && \
     systemctl enable slurmd.service && systemctl enable mariadb
-
-RUN cp /usr/lib/libjwt* /usr/lib64/
 
 COPY src/scripts/start-centos-slurm-cluster.sh /tmp/start-slurm-cluster.sh
 
