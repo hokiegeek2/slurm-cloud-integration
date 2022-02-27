@@ -24,8 +24,7 @@ service slurmd start
 
 # Sleep for 10 seconds to prevent race condition, then start slurmctld controller
 sleep 10
-#sudo -u slurm slurmctld -D
 echo 'starting slurmrestd'
 sudo -u slurmrestd sh /start-slurmrestd.sh &
 echo 'starting slurmctld'
-slurmctld -D
+sudo -u slurm slurmctld -D
