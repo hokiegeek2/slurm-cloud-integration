@@ -1,10 +1,8 @@
-FROM centos:centos7 
+FROM centos:centos7 as slurm_build
 
 RUN yum update -y && yum install cmake git autoconf automake libtool libyaml-devel \
     http-parser-devel json-c-devel jansson-devel openssl openssl-devel bzip2 pam \
     perl-devel python3 wget -y
-
-RUN useradd -m -u 1004 slurm && useradd -m -u 1005 slurmrestd
 
 RUN yum install epel-release -y && yum install munge munge-libs munge-devel -y
 
@@ -27,9 +25,36 @@ RUN ./configure --prefix=/storage/slurm-build --sysconfdir=/etc/slurm --enable-p
                 --with-http-parser=/usr/ --with-yaml=/usr/ --with-jwt=/usr/lib64 --enable-slurmrestd
 
 RUN make && make contrib && make install
+
+FROM centos:centos7
+
+RUN useradd -m -u 1004 slurm && useradd -m -u 1005 slurmrestd
+
+RUN mkdir /storage
 WORKDIR /storage
+
+COPY --from=slurm_build /storage/slurm-build/bin/* /storage/slurm-build/bin/ 
+COPY --from=slurm_build /storage/slurm-build/sbin/* /storage/slurm-build/sbin/
+COPY --from=slurm_build /storage/slurm-build/lib/slurm/* /storage/slurm-build/lib/slurm/
+COPY --from=slurm_build /storage/slurm-build/lib/libslurm* /storage/slurm-build/lib/ 
+
 RUN cp slurm-build/bin/* /usr/bin && cp slurm-build/sbin/* /usr/sbin \
     && cp -R slurm-build/lib/* /usr/lib/
+
+RUN yum update -y && yum install cmake git autoconf automake libtool libyaml-devel \
+    http-parser-devel json-c-devel jansson-devel openssl openssl-devel bzip2 pam \
+    perl-devel python3 wget -y
+
+RUN yum install epel-release -y && yum install munge munge-libs munge-devel -y
+
+RUN git clone --depth 1 --single-branch -b v1.12.0 https://github.com/benmcollins/libjwt.git \
+    libjwt
+WORKDIR libjwt
+RUN autoreconf --force --install
+RUN ./configure --prefix=/usr/lib64
+RUN make -j && make install
+
+RUN yum install mariadb-server mariadb-devel -y
 
 RUN git clone https://github.com/mknoxnv/ubuntu-slurm.git
 RUN cp ubuntu-slurm/slurmd.init /etc/init.d/slurmd
