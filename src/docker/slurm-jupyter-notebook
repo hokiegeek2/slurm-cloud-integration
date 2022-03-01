@@ -1,30 +1,91 @@
-FROM jupyterhub/singleuser:1.2.0
+FROM ubuntu:18.04 as slurm_build
+
+# Install all base dependencies
+RUN apt-get update && apt install sudo git gcc make ruby ruby-dev python3 \
+    libpam0g-dev libmariadb-client-lgpl-dev libmysqlclient-dev wget vim curl -y
+
+# Install munge
+RUN apt-get install libmunge-dev libmunge2 munge -y
+
+# Install hdf5
+RUN apt-get update && apt-get install libhdf5-serial-dev hdf5-tools -y
+
+# Install slurmrestd dependencies except libjwt
+RUN apt-get install cmake libhttp-parser-dev libyaml-dev libjson-c-dev -y
+
+# Install libjwt  - [theory] requires build of static lib for slurm
+RUN apt-get install autoconf automake autotools-dev libtool -y
+
+RUN mkdir /storage
+WORKDIR /storage
+
+RUN git clone --depth 1 --single-branch -b v1.12.0 https://github.com/benmcollins/libjwt.git libjwt
+WORKDIR libjwt
+RUN autoreconf --force --install
+RUN apt-get install pkg-config -y
+RUN autoreconf --force --install
+RUN apt-get install -y libjansson-dev
+RUN ./configure --prefix=/storage/slurm-build
+RUN make -j
+RUN make install
+
+WORKDIR /storage
+RUN wget https://download.schedmd.com/slurm/slurm-21.08.5.tar.bz2
+RUN tar xf slurm-21.08.5.tar.bz2
+WORKDIR /storage/slurm-21.08.5
+
+RUN ./configure --prefix=/storage/slurm-build --sysconfdir=/etc/slurm --enable-pam \
+    --with-pam_dir=/lib/x86_64-linux-gnu/security/ --without-shared-libslurm \
+    --with-http-parser=/usr/ --with-yaml=/usr/ --with-jwt=/storage/slurm-build/ \
+    --enable-slurmrestd
+
+RUN make
+RUN make contrib
+RUN make install
+
+FROM jupyterhub/singleuser:1.4.2
+
+WORKDIR /
+USER root
+
+# Copy Slurm client binaries and libraries
+COPY --from=slurm_build /storage/slurm-build/bin/* /usr/bin/
+COPY --from=slurm_build /storage/slurm-build/lib/slurm/* /storage/slurm-build/lib/slurm/
+COPY --from=slurm_build /storage/slurm-build/lib/libslurm* /storage/slurm-build/lib/
 
 RUN DEBIAN_FRONTEND=noninteractive 
 
 CMD ["/bin/bash"]
 
 USER root
-    
-RUN apt update -y && apt install curl procps munge vim build-essential git wget \
-    sudo software-properties-common mariadb-server -y
 
-RUN apt install python3-pip -y 
+# Install Slurm client runtime dependencies
+RUN apt update -y && apt install curl git wget sudo python3-pip libmunge-dev \
+    libmunge2 munge -y 
 
+# Add admin user that has sudo privileges
 RUN useradd -m admin -s /usr/bin/bash -d /home/admin \
     && echo "admin:admin" | chpasswd && adduser admin sudo \
     && echo "admin     ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
 RUN echo "jovyan     ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
-RUN apt install slurm-client -y
+# Add slurm user required for slurm client libraries
+RUN useradd -m slurm -s /usr/bin/bash -d /home/slurm
 
-RUN apt-get update && apt install nodejs -y 
-RUN apt-get update && apt install npm  -y 
+# Add slurm-juptyerlab dependencies
+RUN apt install nodejs npm -y 
 RUN npm install -g configurable-http-proxy
 
-RUN pip3 install jupyterlab==2.1.2 && pip3 install jupyterlab_slurm==2.0.0
-RUN jupyter labextension install jupyterlab-slurm
+ARG SLURM_JUPYTER_VERSION=${SLURM_JUPYTER_VERSION}
+ENV SLURM_JUPYTER_VERSION=${SLURM_JUPYTER_VERSION}
+
+RUN pip3 install jupyterlab_slurm==${SLURM_JUPYTER_VERSION}
+RUN pip3 install jupyterlab-git
+
+RUN jupyter server extension enable --py jupyterlab_git
 
 ADD src/scripts/initialize-notebook-environment.sh /tmp/initialize-notebook-environment.sh
 RUN chmod +x /tmp/initialize-notebook-environment.sh
+
+WORKDIR /home/jovyan
