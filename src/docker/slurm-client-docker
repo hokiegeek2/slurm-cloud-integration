@@ -1,20 +1,54 @@
-FROM ubuntu:jammy
-
-ARG DEBIAN_FRONTEND=noninteractive 
+FROM ubuntu:18.04 as slurm_build
 
 CMD ["/bin/bash"]
 
-ARG SLURM_UID=${SLURM_UID}
-ENV SLURM_UID=${SLURM_UID}
+ENV DEBIAN_FRONTEND=noninteractive
 
-RUN useradd -m -u ${SLURM_UID} slurm
+# Install all base dependencies
+RUN apt-get update && apt install sudo git gcc make ruby ruby-dev python3 \
+    libpam0g-dev libmariadb-client-lgpl-dev libmysqlclient-dev wget vim curl -y
 
-RUN apt-get update && apt install libmunge2 munge slurm-client sudo vim curl -y
+# Install gem needed for dpkg
+RUN gem install fpm
+
+# Install munge
+RUN apt-get install libmunge-dev libmunge2 munge -y
+
+# Install hdf5
+RUN apt-get install libhdf5-serial-dev hdf5-tools -y
 
 RUN mkdir /storage
+WORKDIR /storage
+
+RUN wget https://download.schedmd.com/slurm/slurm-21.08.5.tar.bz2
+RUN tar xf slurm-21.08.5.tar.bz2
+WORKDIR /storage/slurm-21.08.5
+
+RUN ./configure --prefix=/storage/slurm-build --sysconfdir=/etc/slurm --enable-pam \
+    --with-pam_dir=/lib/x86_64-linux-gnu/security/ --without-shared-libslurm 
+
+RUN make
+RUN make contrib
+RUN make install
+
+WORKDIR /storage
+RUN fpm -s dir -t deb -v 1.0 -n slurm-21.08.5 --prefix=/usr -C /storage/slurm-build .
+
+FROM ubuntu:18.04
+
+# extract and install slurm
+RUN mkdir /storage
+WORKDIR /storage
+COPY --from=slurm_build /storage/slurm-build /storage/slurm-build
+COPY --from=slurm_build /storage/slurm-21.08.5_1.0_amd64.deb ./
+RUN dpkg -i slurm-21.08.5_1.0_amd64.deb && rm -rf slurm-21.08.5_1.0_amd64.deb
+
+## Install munge
+RUN apt-get update && apt-get install libmunge-dev libmunge2 munge -y
 
 COPY src/scripts/start-slurm-client.sh /storage/start-slurm-client.sh
 
 WORKDIR /storage
+RUN useradd slurm
 
 ENTRYPOINT sh start-slurm-client.sh
