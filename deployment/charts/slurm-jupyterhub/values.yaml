@@ -29,7 +29,6 @@ hub:
   config:
     JupyterHub:
       admin_access: true
-      authenticator_class: dummy
   service:
     type: ClusterIP
     annotations: {}
@@ -71,7 +70,69 @@ hub:
   annotations: {}
   command: []
   args: []
-  extraConfig: {}
+  extraConfig: 
+      preSpawnHook: |
+          from pip._internal import main as pipmain
+
+          # pip install and configure the Authenticator
+          pipmain(['install', 'jupyterhub-nativeauthenticator'])
+
+          from nativeauthenticator import NativeAuthenticator
+          from typing import Tuple
+
+          '''
+          Custom authenticator extends the NativeAuthenticator to do the following:
+              1. Retrieve the user's slurm cluster uid and gid
+              2. Set the NB_USER, NB_UID, and NB_GID elements of the spawner environment
+          '''
+          class DictAuthenticator(NativeAuthenticator):
+
+            def getIds(self, user : str) -> Tuple[str,str]:
+                '''
+                The getIds method retrieves the uid and gid assigned to the Jupyterhub
+                user on the target Slurm cluster. 
+
+                This method is stubbed out as a Dict[str,Tuple[str,str]] for now. The first 
+                entry of the tuple is user's slurm cluster uid, while the second entry is 
+                the user's gid on slurm cluster needed to run a slurm job
+
+                example: "user1": ("1000","100")
+                '''
+                idsCache = {
+
+ 
+                           }
+                try:
+                    return (idsCache[user])
+                except KeyError as ke:
+                    raise ValueError(('The user {} does not have Slurm cluster access'.\
+                                             format(user)))
+
+            from tornado import gen
+            @gen.coroutine
+            def pre_spawn_start(self, user, spawner) -> None:
+                '''
+                The overridden pre_spawn_start method retrieves the username of the user
+                spawning the singleuser notebook along with the uid and gid on the 
+                target slurm cluster and sets the NB_USER, NB_UID, and NB_GID spawner
+                env variables.
+                '''
+                auth_state = yield user.get_auth_state()
+                user = spawner.user.name
+                ids  = self.getIds(user)
+                spawner.environment = {'NB_USER':user, 'NB_UID':ids[0], 'NB_GID':ids[1]}
+
+          c.JupyterHub.authenticator_class = DictAuthenticator
+          c.KubeSpawner.args = ['--allow-root']
+          c.Spawner.cmd = ['start.sh','jupyterhub-singleuser','--allow-root']
+
+          # if true, users are able to signup
+          c.DictAuthenticator.enable_signup=True
+          # if true, users are added without auth check from admin
+          c.DictAuthenticator.open_signup=False
+          # set of users who are able to administer user accounts. note: the default admin user
+          # is "admin". replace with a set of 1..n users that should have the admin role
+          c.DictAuthenticator.admin_users={'admin'}
   extraFiles: {}
   extraEnv: {}
   extraContainers: []
@@ -79,7 +140,7 @@ hub:
   extraVolumeMounts: []
   image:
     name: jupyterhub/k8s-hub
-    tag: "1.1.3"
+    tag: "1.2.0"
     pullPolicy:
     pullSecrets: []
   resources: {}
@@ -178,7 +239,9 @@ proxy:
     labels: {}
     annotations: {}
     nodePorts:
-      http:
+      ## define a static port to avoid changing urls when testing 
+      ## repeated installation
+      http: 32022
       https:
     disableHttpPort: false
     extraPorts: []
@@ -275,7 +338,7 @@ proxy:
       allowPrivilegeEscalation: false
     image:
       name: jupyterhub/k8s-secret-sync
-      tag: "1.1.3"
+      tag: "1.2.0"
       pullPolicy:
       pullSecrets: []
     resources: {}
@@ -315,7 +378,7 @@ singleuser:
   networkTools:
     image:
       name: jupyterhub/k8s-network-tools
-      tag: "1.1.3"
+      tag: "1.2.0"
       pullPolicy:
       pullSecrets: []
   cloudMetadata:
@@ -349,40 +412,45 @@ singleuser:
       mountPath: /etc/slurm-llnl/slurm.conf
     munge-key:
       mountPath: /tmp/munge/munge.key
-  extraEnv: {}
-
+    initialize-notebook:
+      mountPath: /tmp/initialize-notebook-environment.sh
+  extraEnv:
+    CHOWN_HOME: 'yes'
+    CHOWN_HOME_OPTS: -R
+    GRANT_SUDO: 'yes'
+    NB_USER: '$(JUPYTERHUB_USER)'
   # Prepare the munge.key for usage and start the munge service 
   lifecycleHooks:
     postStart:
       exec:
         command:
-          - "sh"
-          - "/tmp/initialize-notebook-environment.sh"
+         - "sh"
+         - "/tmp/initialize-notebook-environment.sh"
   initContainers: []
   extraContainers: []
-  uid: 1000
-  fsGid: 100
+  uid: 0
+  fsGid: 0
   serviceAccountName:
   storage:
-    type: dynamic
+    type: none
     extraLabels: {}
     extraVolumes: []
     extraVolumeMounts: []
     static:
       pvcName:
       subPath: "{username}"
-    capacity: 10Gi
-    homeMountPath: /home/jovyan
+    capacity: 1Gi
+    homeMountPath: /home/{username}
     dynamic:
-      storageClass:
-      pvcNameTemplate: claim-{username}{servername}
-      volumeNameTemplate: volume-{username}{servername}
+      storageClass: local-storage 
+      pvcNameTemplate: slurm-jupyter-claim-{username}{servername}
+      volumeNameTemplate: slurm-jupyter-{username}{servername}
       storageAccessModes: [ReadWriteOnce]  
   image:
     name: hokiegeek2/slurm-jupyter-notebook
-    tag: 0.0.3
-    pullPolicy:
     pullSecrets: []
+    tag: 21.08.5
+    pullPolicy:
   startTimeout: 300
   cpu:
     limit:
@@ -394,7 +462,6 @@ singleuser:
     limits: {}
     guarantees: {}
   cmd: jupyterhub-singleuser
-  #cmd: /tmp/start-slurm-notebook.sh 
   defaultUrl: /lab
   extraPodConfig: {}
   profileList: []
@@ -403,7 +470,7 @@ singleuser:
 scheduling:
   userScheduler:
     enabled: true
-    replicas: 2
+    replicas: 1
     logLevel: 4
     # plugins ref: https://kubernetes.io/docs/reference/scheduling/config/#scheduling-plugins-1
     plugins:
@@ -516,7 +583,7 @@ prePuller:
     # image and the configuration below relates to the hook-image-awaiter Job
     image:
       name: jupyterhub/k8s-image-awaiter
-      tag: "1.1.3"
+      tag: "1.2.0"
       pullPolicy:
       pullSecrets: []
     containerSecurityContext:
