@@ -1,0 +1,25 @@
+---
+kind: "Service"
+apiVersion: "v1"
+metadata:
+  name: "prometheus-slurm-exporter"
+spec:
+  ports:
+    -
+      protocol: "TCP"
+      port: {{ Values.service.port }}
+      targetPort: {{ Values.service.targetPort }} 
+---
+
+kind: "Endpoints"
+apiVersion: "v1"
+metadata:
+  name: "prometheus-slurm-exporter"
+subsets:
+  -
+    addresses:
+      -
+        ip: "{{ Values.endpoint.host }}"
+    ports:
+      -
+        port: {{ Values.endpoint.port }}
