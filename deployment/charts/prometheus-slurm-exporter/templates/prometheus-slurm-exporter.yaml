@@ -1,0 +1,40 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ .Values.server.appName }}
+  labels: 
+    app: {{ .Values.server.appName }}
+spec:      
+  restartPolicy: Never
+  containers:
+    - name: prometheus-slurm-exporter
+      image: hokiegeek2/prometheus-slurm-exporter:{{ .Values.releaseVersion }}
+      imagePullPolicy: {{ .Values.imagePullPolicy }}
+      command: [ "sh", "start-prometheus-exporter.sh" ]
+      resources:
+        requests:
+          cpu: {{ .Values.server.resources.requests.cpu }}
+          memory: {{ .Values.server.resources.requests.memory }}
+        limits:
+          cpu: {{ .Values.server.resources.limits.cpu }}
+          memory: {{ .Values.server.resources.limits.memory }}
+      ports:
+        - containerPort: {{ .Values.server.port }}
+          hostPort: {{ .Values.server.port }}
+      volumeMounts: 
+        - name: slurm-config
+          mountPath: /etc/slurm   
+        - name: munge-key-file
+          mountPath: "/tmp/munge"
+  volumes:
+    - name: slurm-config
+      configMap:
+        name: slurm-config-map
+        items:
+          - key: slurm-conf
+            path: slurm.conf         
+    - name: munge-key-file
+      secret:
+        secretName: slurm-munge-key   
+
+
