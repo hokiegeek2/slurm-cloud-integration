@@ -13,7 +13,7 @@ ls -la /etc/munge
 sudo service munge start
 
 # Start and configure mysql database and slurm db interface
-sudo service mysql start
+sudo service mariadb start
 sudo service slurmdbd start
 sudo mysql -u root < initialize-mariadb.sh
 
@@ -25,6 +25,6 @@ service slurmd start
 # Sleep for 10 seconds to prevent race condition, then start slurmctld controller
 sleep 10
 echo 'starting slurmrestd'
-sudo -u slurmrestd sh /start-slurmrestd.sh &
+sudo -u slurmrestd sh ./start-slurmrestd.sh &
 echo 'starting slurmctld'
 sudo -u slurm slurmctld -D
