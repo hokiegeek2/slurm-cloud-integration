@@ -69,4 +69,7 @@ COPY src/conf/single-node-slurmdbd.conf /etc/slurm/slurmdbd.conf
 RUN chmod 600 /etc/slurm/slurmdbd.conf
 RUN chown slurm:slurm /etc/slurm/slurmdbd.conf
 
+RUN echo "/usr/lib/slurm" | sudo tee /etc/ld.so.conf && \
+         ldconfig
+
 ENTRYPOINT sh start-slurm-cluster.sh
