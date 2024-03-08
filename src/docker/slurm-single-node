@@ -1,81 +1,41 @@
-FROM ubuntu:18.04 as slurm-build
+FROM ubuntu:22.04
 
-CMD ["/bin/bash"]
-ENV DEBIAN_FRONTEND=noninteractive
-# Install all base dependencies
-RUN apt-get update && apt install sudo git gcc make ruby ruby-dev python3 \
-    libpam0g-dev libmariadb-client-lgpl-dev libmysqlclient-dev wget vim curl -y
+RUN apt update && apt-get update && apt install sudo git gcc make ruby \
+        ruby-dev python3 libpam0g-dev libmysqlclient-dev mariadb-client \
+        mariadb-server wget vim curl -y
 
-# Install gem needed for dpkg
 RUN gem install fpm
 
-# Install munge
-RUN apt-get install libmunge-dev libmunge2 munge -y
+RUN apt-get install libmunge-dev libmunge2 munge -y && \
+    apt-get install libhdf5-serial-dev hdf5-tools -y && \
+    apt-get install cmake libhttp-parser-dev libyaml-dev libjson-c-dev \
+    autoconf automake autotools-dev libtool  pkg-config libjansson-dev -y
 
-# Install hdf5
-RUN apt-get install libhdf5-serial-dev hdf5-tools -y
+RUN git clone --depth 1 --single-branch -b v1.12.0 https://github.com/benmcollins/libjwt.git libjwt
+WORKDIR /libjwt
+RUN autoreconf --force --install && \
+    ./configure --prefix=/usr/ && \
+    make -j && \
+    make install
 
-
-# Install slurmrestd dependencies except libjwt
-RUN apt-get install cmake libhttp-parser-dev libyaml-dev libjson-c-dev -y
-
-# Install libjwt  - [theory] requires build of static lib for slurm
-RUN apt-get install autoconf automake autotools-dev libtool -y
+RUN useradd -m -u 1004 slurm && \
+    useradd slurmrestd
 
 RUN mkdir /storage
 WORKDIR /storage
-
-RUN git clone --depth 1 --single-branch -b v1.12.0 https://github.com/benmcollins/libjwt.git libjwt
-WORKDIR libjwt
-RUN autoreconf --force --install
-RUN apt-get install pkg-config -y
-RUN autoreconf --force --install
-RUN apt-get install -y libjansson-dev
-RUN ./configure --prefix=/storage/slurm-build
-RUN make -j
-RUN make install
-
-WORKDIR /storage
-RUN wget https://download.schedmd.com/slurm/slurm-21.08.5.tar.bz2
-RUN tar xf slurm-21.08.5.tar.bz2
-#RUN ls /storage/slurm-21.08.5/configure
-WORKDIR /storage/slurm-21.08.5
-
-RUN ./configure --prefix=/storage/slurm-build --sysconfdir=/etc/slurm --enable-pam \
-    --with-pam_dir=/lib/x86_64-linux-gnu/security/ --without-shared-libslurm \
-    --with-http-parser=/usr/ --with-yaml=/usr/ --with-jwt=/storage/slurm-build/ \
-    --enable-slurmrestd
-
-RUN make
-RUN make contrib
-RUN make install
+RUN wget https://download.schedmd.com/slurm/slurm-22.05.3.tar.bz2 && \
+    tar xvf slurm-22.05.3.tar.bz2 && \
+    cd slurm-22.05.3 && \
+    ./configure --prefix=/storage/slurm-build --sysconfdir=/etc/slurm --enable-pam \
+    --with-pam_dir=/lib/x86_64-linux-gnu/security/ --with-http-parser=/usr/ \
+    --with-yaml=/usr/ --with-jwt=/usr/ && \
+    make && \
+    make contrib && \
+    make install 
 
 WORKDIR /storage
-RUN fpm -s dir -t deb -v 1.0 -n slurm-21.08.5 --prefix=/usr -C /storage/slurm-build .
-
-# END of slurm and jwt build
-# STEP 2 may need some apt-get installs
-FROM ubuntu:18.04
-
-# Install all base dependencies
-RUN apt-get update && apt install sudo git gcc make ruby ruby-dev python3 \
-    libpam0g-dev libmariadb-client-lgpl-dev libmysqlclient-dev wget vim curl -y
-
-# Install slurmrestd dependencies except libjwt
-RUN apt-get install cmake libhttp-parser-dev libyaml-dev libjson-c-dev -y
-RUN apt-get install -y libjansson-dev
-
-# extract and install slurm+jwt
-COPY --from=slurm-build /storage/slurm-21.08.5_1.0_amd64.deb ./
-RUN dpkg -i slurm-21.08.5_1.0_amd64.deb && rm -rf slurm-21.08.5_1.0_amd64.deb
-
-## Install munge
-RUN apt-get install libmunge-dev libmunge2 munge -y
-
-# Add the slurm user
-RUN useradd -m -u 1004 slurm
-RUN useradd -m -u 1005 slurmrestd
-RUN useradd -m -u 1006 slurmtest
+RUN fpm -s dir -t deb -v 1.0 -n slurm-22.05.3 --prefix=/usr -C /storage/slurm-build . && \
+    dpkg -i slurm-22.05.3_1.0_amd64.deb
 
 # Make runtime and conf directories
 RUN mkdir -p /etc/slurm /etc/slurm/prolog.d /etc/slurm/epilog.d /var/spool/slurm/ctld \
@@ -86,9 +46,6 @@ RUN chown slurm /var/spool/slurm/ctld /var/spool/slurm/d /var/log/slurm /var/run
 RUN dd if=/dev/random of=/etc/slurm/jwt_hs256.key bs=32 count=1
 RUN chown slurm:slurm /etc/slurm/jwt_hs256.key
 RUN chmod 600 /etc/slurm/jwt_hs256.key
-
-# Install MariaDB for slurm accounting (as the instructions state, change the password)
-RUN apt-get update && apt-get install mariadb-server -y
 
 # Get example files and copy to corresponding directories
 RUN git clone https://github.com/mknoxnv/ubuntu-slurm.git
@@ -112,5 +69,7 @@ COPY src/conf/single-node-slurmdbd.conf /etc/slurm/slurmdbd.conf
 RUN chmod 600 /etc/slurm/slurmdbd.conf
 RUN chown slurm:slurm /etc/slurm/slurmdbd.conf
 
+RUN echo "/usr/lib/slurm" | sudo tee /etc/ld.so.conf && \
+         ldconfig
+
 ENTRYPOINT sh start-slurm-cluster.sh
- 
