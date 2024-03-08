@@ -1,0 +1,108 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "debezium.fullname" . }}-connect
+  labels:
+    {{- include "debezium.labels.connect" . | nindent 4 }}
+spec:
+  {{- if not .Values.connect.autoscaling.enabled }}
+  replicas: {{ .Values.connect.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "debezium.selectorLabels.connect" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.connect.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "debezium.selectorLabels.connect" . | nindent 8 }}
+    spec:
+      {{- with .Values.connect.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: {{ .Chart.Name }}-connect
+          image: "{{ .Values.connect.image.repository }}:{{ .Values.connect.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.connect.image.pullPolicy }}
+          ports:
+            - name: {{ .Values.connect.service.name }}
+              containerPort: {{ .Values.connect.service.port }}
+              protocol: {{ .Values.connect.service.protocol }}
+          resources:
+            {{- toYaml .Values.connect.resources | nindent 12 }}
+          {{- with .Values.connect.env }}
+          env:
+            {{- toYaml . | nindent 12}}
+          {{- end}}
+      {{- with .Values.connect.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.connect.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.connect.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+---
+{{- if .Values.ui.enabled -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "debezium.fullname" . }}-ui
+  labels:
+    {{- include "debezium.labels.ui" . | nindent 4 }}
+spec:
+  {{- if not .Values.ui.autoscaling.enabled }}
+  replicas: {{ .Values.ui.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "debezium.selectorLabels.ui" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.ui.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "debezium.selectorLabels.ui" . | nindent 8 }}
+    spec:
+      {{- with .Values.ui.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: {{ .Chart.Name }}-ui
+          image: "{{ .Values.ui.image.repository }}:{{ .Values.ui.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.ui.image.pullPolicy }}
+          ports:
+            - name: {{ .Values.ui.service.name}}
+              containerPort: 80
+              protocol: TCP
+          resources:
+            {{- toYaml .Values.ui.resources | nindent 12 }}
+          {{- with .Values.ui.env }}
+          env:
+            {{- toYaml . | nindent 12}}
+          {{- end}}
+      {{- with .Values.ui.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.ui.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.ui.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end}}

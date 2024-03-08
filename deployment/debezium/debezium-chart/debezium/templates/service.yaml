@@ -1,0 +1,34 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "debezium.fullname" . }}-connect
+  labels:
+    {{- include "debezium.labels.connect" . | nindent 4 }}
+spec:
+  type: {{ .Values.connect.service.type }}
+  ports:
+    - port: {{ .Values.connect.service.port }}
+      targetPort: {{ .Values.connect.service.port}}
+      protocol: {{ .Values.connect.service.protocol}}
+      name: {{ .Values.connect.service.name}}
+  selector:
+    {{- include "debezium.selectorLabels.connect" . | nindent 4 }}
+---
+{{- if .Values.ui.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "debezium.fullname" . }}-ui
+  labels:
+    {{- include "debezium.labels.ui" . | nindent 4 }}
+spec:
+  type: {{ .Values.ui.service.type }}
+  ports:
+    - port: {{ .Values.ui.service.port }}
+      targetPort: {{ .Values.ui.service.port}}
+      protocol: {{ .Values.ui.service.protocol}}
+      name: {{ .Values.ui.service.name}}
+  selector:
+    {{- include "debezium.selectorLabels.ui" . | nindent 4 }}
+{{- end}}

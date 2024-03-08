@@ -1,0 +1,19 @@
+---
+{{- if and .Values.ui.ingress.enabled .Values.ui.enabled -}}
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: {{ include "debezium.fullname" $ }}-ui
+  labels:
+    router: {{ .Values.ui.ingress.router }}
+    {{- include "debezium.labels.ui" $ | nindent 4 }}
+spec:
+  host: {{ .Values.ui.ingress.host | quote }}
+  port:
+    targetPort: {{ $.Values.ui.service.port }}
+  to:
+    kind: Service
+    name: {{ include "debezium.fullname" $ }}-ui
+    weight: 100
+  wildcardPolicy: None
+{{- end }}
