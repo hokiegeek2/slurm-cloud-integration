@@ -1,5 +1,8 @@
 FROM ubuntu:22.04
 
+ARG VERSION=${VERSION}
+ENV VERSION=${VERSION}
+
 RUN apt update && apt-get update && apt install sudo git gcc make ruby \
         ruby-dev python3 libpam0g-dev libmysqlclient-dev mariadb-client \
         mariadb-server wget vim curl -y
@@ -21,11 +24,15 @@ RUN autoreconf --force --install && \
 RUN useradd -m -u 1004 slurm && \
     useradd slurmrestd
 
+RUN echo $VERSION
+
+RUN export SLURM_VERSION=$VERSION
+
 RUN mkdir /storage
 WORKDIR /storage
-RUN wget https://download.schedmd.com/slurm/slurm-22.05.3.tar.bz2 && \
-    tar xvf slurm-22.05.3.tar.bz2 && \
-    cd slurm-22.05.3 && \
+RUN wget https://download.schedmd.com/slurm/slurm-$VERSION.tar.bz2 && \
+    tar xvf slurm-$VERSION.tar.bz2 && \
+    cd slurm-$VERSION && \
     ./configure --prefix=/storage/slurm-build --sysconfdir=/etc/slurm --enable-pam \
     --with-pam_dir=/lib/x86_64-linux-gnu/security/ --with-http-parser=/usr/ \
     --with-yaml=/usr/ --with-jwt=/usr/ && \
@@ -34,8 +41,8 @@ RUN wget https://download.schedmd.com/slurm/slurm-22.05.3.tar.bz2 && \
     make install 
 
 WORKDIR /storage
-RUN fpm -s dir -t deb -v 1.0 -n slurm-22.05.3 --prefix=/usr -C /storage/slurm-build . && \
-    dpkg -i slurm-22.05.3_1.0_amd64.deb
+RUN fpm -s dir -t deb -v 1.0 -n slurm-$SLURM_VERSION --prefix=/usr -C /storage/slurm-build .
+RUN dpkg -i slurm-$VERSION_1.0_amd64.deb
 
 # Make runtime and conf directories
 RUN mkdir -p /etc/slurm /etc/slurm/prolog.d /etc/slurm/epilog.d /var/spool/slurm/ctld \
@@ -72,4 +79,4 @@ RUN chown slurm:slurm /etc/slurm/slurmdbd.conf
 RUN echo "/usr/lib/slurm" | sudo tee /etc/ld.so.conf && \
          ldconfig
 
-ENTRYPOINT sh start-slurm-cluster.sh
+ENTRYPOINT sudo sh start-slurm-cluster.sh
