@@ -59,6 +59,9 @@ Running the slurm-client is as follows:
 
 ```
 docker run -it --rm --entrypoint=bash -v /tmp/munge.key:/tmp/munge/munge.key -v /tmp/slurm.conf:/etc/slurm/slurm.conf -v /tmp/slurmdbd.conf:/etc/slurm/slurmdbd.conf -v /tmp/jwt_hs256.key:/etc/slurm/jwt_hs256.key --network=host $REPOSITORY/slurm-client:$VERSION
+
+# Once docker container starts, start munge service
+sh start-slurm-client.sh
 ```
 
 ### Troubleshooting
