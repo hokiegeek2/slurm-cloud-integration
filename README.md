@@ -21,6 +21,9 @@ docker build --build-arg VERSION=$VERSION -f src/docker/slurm-single-node -t $RE
 To simply run the slurm-single-node docker container, execute the following command:
 
 ```
+export REPOSITORY=hokiegeek2
+export VERSION=23.11.4
+
 docker run -it --rm --network=host --privileged $REPOSITORY/slurm-single-node:$VERSION
 ```
 
@@ -29,16 +32,19 @@ Note: running the docker container in privileged mode is required to run slurmre
 In order to perform any integration testing with applications outside of the slurm-single-node, a munge.key used in the external app must be mounted into the docker container. Accordingly, to mount a munge.key and start the slurm-single-node docker container, execute the following command:
 
 ```
-docker run -it --rm --network=host -v $PWD/munge.key:/tmp/munge.key hokiegeek2/slurm-single-node
+export REPOSITORY=hokiegeek2
+export VERSION=23.11.4
+
+docker run -it --rm --network=host -v $PWD/munge.key:/tmp/munge.key $REPOSITORY/slurm-single-node:$VERSION
 ```
 
 Successful startup of slurm-single-node looks like this:
 
 ![](https://user-images.githubusercontent.com/10785153/126529217-e8df432b-c925-4155-af37-d00e9205cd16.png)
 
-### slurm-lient Docker
+### slurm-client Docker
 
-The slurm-client Dockerfile serves as a base Docker image to build slurm client images such as slurmrestd where the node is neither the slurm controller (slurmctld) or slurm worker (slurmd)
+The [slurm-client](https://github.com/hokiegeek2/slurm-cloud-integration/blob/master/src/docker/slurm-client) Dockerfile serves as a base Docker image to build slurm client images such as slurmrestd where the node is neither a slurm controller (slurmctld) nor a slurm worker (slurmd)
 
 Building the slurm-client is as follows:
 
