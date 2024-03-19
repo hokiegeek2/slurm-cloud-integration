@@ -1,12 +1,15 @@
-FROM ubuntu:18.04 as slurm_build
+FROM ubuntu:22.04 as slurm_build
 
 CMD ["/bin/bash"]
 
 ENV DEBIAN_FRONTEND=noninteractive
 
+ARG VERSION=${VERSION}
+ENV VERSION=${VERSION}
+
 # Install all base dependencies
-RUN apt-get update && apt install sudo git gcc make ruby ruby-dev python3 \
-    libpam0g-dev libmariadb-client-lgpl-dev libmysqlclient-dev wget vim curl -y
+RUN apt-get update && apt install sudo git gcc make ruby ruby-dev python3 bzip2 \
+    libpam0g-dev mariadb-client libmysqlclient-dev wget vim curl libtool -y
 
 # Install gem needed for dpkg
 RUN gem install fpm
@@ -20,9 +23,9 @@ RUN apt-get install libhdf5-serial-dev hdf5-tools -y
 RUN mkdir /storage
 WORKDIR /storage
 
-RUN wget https://download.schedmd.com/slurm/slurm-21.08.5.tar.bz2
-RUN tar xf slurm-21.08.5.tar.bz2
-WORKDIR /storage/slurm-21.08.5
+RUN wget https://download.schedmd.com/slurm/slurm-$VERSION.tar.bz2 && \
+    tar xvf slurm-$VERSION.tar.bz2
+WORKDIR /storage/slurm-$VERSION
 
 RUN ./configure --prefix=/storage/slurm-build --sysconfdir=/etc/slurm --enable-pam \
     --with-pam_dir=/lib/x86_64-linux-gnu/security/ --without-shared-libslurm 
@@ -32,16 +35,19 @@ RUN make contrib
 RUN make install
 
 WORKDIR /storage
-RUN fpm -s dir -t deb -v 1.0 -n slurm-21.08.5 --prefix=/usr -C /storage/slurm-build .
+RUN fpm -s dir -t deb -v 1.0 -n slurm-$VERSION --prefix=/usr -C /storage/slurm-build .
 
-FROM ubuntu:18.04
+FROM ubuntu:22.04
+
+ARG VERSION=${VERSION}
+ENV VERSION=${VERSION}
 
 # extract and install slurm
 RUN mkdir /storage
 WORKDIR /storage
 COPY --from=slurm_build /storage/slurm-build /storage/slurm-build
-COPY --from=slurm_build /storage/slurm-21.08.5_1.0_amd64.deb ./
-RUN dpkg -i slurm-21.08.5_1.0_amd64.deb && rm -rf slurm-21.08.5_1.0_amd64.deb
+COPY --from=slurm_build /storage/slurm-${VERSION}_1.0_amd64.deb ./
+RUN dpkg -i slurm-${VERSION}_1.0_amd64.deb && rm -rf slurm-${VERSION}_1.0_amd64.deb
 
 ## Install munge
 RUN apt-get update && apt-get install libmunge-dev libmunge2 munge -y
