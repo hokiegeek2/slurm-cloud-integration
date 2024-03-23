@@ -2,7 +2,7 @@ import argparse
 import json
 import jwcrypto.jwk as jwk
 
-def create_jwks_json(pem_file_path: str):
+def create_jwks_json(pem_file_path: str) -> str:
     # Load the PEM file containing JSON Web Key (JWK)
     with open(pem_file_path, 'rb') as fh:
          slurm_jwks_pem = fh.read()
@@ -13,9 +13,10 @@ def create_jwks_json(pem_file_path: str):
     # Export JWK as JSON string
     return jwk.JWK.export_private(jwks_key)
 
-def create_jwks_json_file(pem_file_path: str, jwks_json_file_path) -> None:
-    jwks_json_string = create_jwks_json(pem_file_path)
-    jwks_dict = {"keys": [jwks_json_string]}
+def create_jwks_json_file(pem_file_path: str, jwks_json_file_path:str=None) -> None:
+    jwks_key_dict = json.loads(create_jwks_json(pem_file_path))
+    jwks_dict = {"keys": [jwks_key_dict]}
+    
     with open(jwks_json_file_path, 'w') as fh:
         fh.write(json.dumps(jwks_dict))
 
@@ -25,11 +26,13 @@ def main():
     parser.add_argument("--jwks_json_file_path", required=False, type=str, help="path to write jwks.json to")
     args = parser.parse_args()
 
+    print(args.jwks_json_file_path)
+
     pem_file_path = args.pem_file_path
     if args.jwks_json_file_path:
        create_jwks_json_file(args.pem_file_path,args.jwks_json_file_path)
     else:
-       print(create_jwks_json_file(pem_file_path,))
+       print(create_jwks_json(pem_file_path))
 
 
 if __name__ == "__main__":

@@ -2,11 +2,13 @@
 
 ## Background
 
-The slurm-cloud-integration project contains Dockerfiles, config files, and deployment/config content designed to enable the protyping and delivery of capabilities that integrate the Kubernetes and Slurm-HPC ecosystems
+The slurm-cloud-integration project contains Dockerfiles, config files, python scripts, and deployment/config content designed to enable protoyping and delivery of capabilities that integrate the Kubernetes and Slurm-HPC ecosystems
 
-The combination of the slurm-jupyter-docker and slurm-single-node Dockerfiles are based upon the excellent work by [Rodrigo Ancavil](https://medium.com/analytics-vidhya/slurm-cluster-with-docker-9f242deee601).
+## Slurm Docker Images
 
-## slurm-single-node: full stack, single-node Slurm in Docker
+The combination of the slurm-single-node, slurm-client and slurm-jupyter-docker Dockerfiles are based upon the excellent work by [Rodrigo Ancavil](https://medium.com/analytics-vidhya/slurm-cluster-with-docker-9f242deee601).
+
+### slurm-single-node: full stack, single-node Slurm in Docker
 
 The [slurm-single-node](https://github.com/hokiegeek2/slurm-cloud-integration/blob/master/src/docker/slurm-single-node) Dockerfile delivers an image that enables integration testing with a full Slurm stack w/ one worker (slurmd) node. This Dockerfile is based upon this excellent [example](https://blog.llandsmeer.com/tech/2020/03/02/slurm-single-instance.html) written by Lennart Landsmeer.
 
@@ -42,7 +44,7 @@ Successful startup of slurm-single-node looks like this:
 
 ![](https://user-images.githubusercontent.com/10785153/126529217-e8df432b-c925-4155-af37-d00e9205cd16.png)
 
-### slurm-client Docker
+### slurm-client
 
 The [slurm-client](https://github.com/hokiegeek2/slurm-cloud-integration/blob/master/src/docker/slurm-client) Dockerfile serves as a base Docker image to build slurm client images such as slurmrestd where the node is neither a slurm controller (slurmctld) nor a slurm worker (slurmd)
 
@@ -72,7 +74,8 @@ If the munge keys don't match, the following error occurs:
 slurmctld: fatal: You are running with a database but for some reason we have no TRES from it.  This should only happen if the database is down and you don't have any state files.
 ```
 
-## slurm-jupyterlab on k8s
+### slurm-jupyter-docker
+
 The [slurm-jupyter-docker](https://github.com/hokiegeek2/slurm-cloud-integration/blob/master/src/docker/slurm-jupyter-docker) Dockerfile and slurm-jupyter [Helm chart](https://github.com/hokiegeek2/slurm-cloud-integration/tree/master/deployment/charts/slurm-jupyter) enables deployment of the awesome [NERSC](https://github.com/NERSC) [jupyterlab-slurm](https://github.com/NERSC/jupyterlab-slurm) application to Kubernetes. 
 
 The slurm-jupyter Docker image is built from the project root directory as follows:
@@ -177,9 +180,9 @@ Using the [test.slurm](https://github.com/hokiegeek2/slurm-cloud-integration/blo
 
 ![](https://user-images.githubusercontent.com/10785153/126484250-716e1dcb-5f36-43e9-abb7-4e4f7721adcd.png)
 
-# Deploying slurm_jupyter in Jupyterhub on k8s
+## Deploying slurm_jupyter in Jupyterhub on k8s
 
-## Background
+### Background
 
 The Jupyterhub deployment of slurm-jupyter utilizes the [kubespawner](https://github.com/jupyterhub/kubespawner) which is configured via the [singleuser](https://github.com/jupyterhub/jupyterhub/tree/main/singleuser) section of the jupyterhub [values.yaml](https://github.com/jupyterhub/zero-to-jupyterhub-k8s/blob/main/jupyterhub/values.yaml) file.
 
@@ -187,7 +190,7 @@ The Jupyterhub deployment of slurm-jupyter utilizes the [kubespawner](https://gi
 
 slurm-jupyter can be deployed as a singleuser image within a k8s jupyterhub install
 
-#### Building slurm-jupyter singleuser image
+#### Building slurm-jupyter-notebook singleuser image
 
 ```
 docker build -f src/docker/slurm-jupyter-notebook -t hokiegeek2/slurm-jupyter-notebook:$VERSION .
@@ -210,19 +213,19 @@ Note that the munge.key handling -> since it is a binary file, the following com
 base64 /mnt/data/slurm/munge.key > /mnt/data/slurm/munge.key.b64
 ```
 
-# Testing 
+## Testing 
 
 There are a couple of [test slurm files](https://github.com/hokiegeek2/slurm-cloud-integration/tree/master/src/tests) in this repo to confirm expected slurm job behavior from slurm-jupyter.
 
-# slurmrestd Integration
+## slurmrestd Integration
 
-## Background
+### Background
 
 The [slurmrestd](https://slurm.schedmd.com/slurmrestd.html) service provides a REST endpoint to perform operations against slurm. An important benefit of slurmrestd is that it obviates the need to configure and deploy slurm libraries to clients that need slurm access.
 
-## Steps to Enable slurmrestd 
+### Steps to Enable slurmrestd 
 
-### Install slurmrestd Dependencies
+#### Install slurmrestd Dependencies
 
 As shown in the [slurm-single-node](src/docker/slurm-single-node) docker file, the following slurmrestd dependencies must be installed:
 
@@ -230,7 +233,7 @@ As shown in the [slurm-single-node](src/docker/slurm-single-node) docker file, t
 sudo apt-get update && apt-get install cmake libhttp-parser-dev libjwt-dev libyaml-dev libjson-c-dev -y
 ```
 
-### Build slurm with slurmrestd Support
+#### Build slurm with slurmrestd Support
 
 As shown in the [slurm-single-node](src/docker/slurm-single-node) docker file, the slurm build needs to be configured to (1) build slurmrestd and (2) link to the slurmrestd dependent libraries (http-parser, yaml, and jwt) via the $SLURM_PROJECT_DIRECTORY/configure command:
 
@@ -240,7 +243,7 @@ As shown in the [slurm-single-node](src/docker/slurm-single-node) docker file, t
     --with-http-parser=/usr/local/ --with-yaml=/usr/local/ --with-jwt=/usr/local/lib/ --enable-slurmrestd 
 ```
 
-### Update slurmctld and slurmdbd to Enable jwt Authentication
+#### Update slurmctld and slurmdbd to Enable jwt Authentication
 
 Since slurmrestd uses [Json Web Token](https://jwt.io/introduction) for authentication, jwt has to be added as 
 an alternative authentiation type in both the slurm.conf and slurmdbd.conf files as detailed [here](https://slurm.schedmd.com/jwt.html):
@@ -250,7 +253,7 @@ AuthAltTypes=auth/jwt
 AuthAltParameters=jwt_key=/etc/slurm/jwt_hs256.key
 ```
 
-### Generate and Set Permissions for jwt key
+#### Generate and Set Permissions for jwt key
 
 Now that slurmctld and slurmdbd are built and configured for jwt authentication, generate the jwt key to be used by slurmctld and slurmdbd to verify user tokens submitted with each slurmrestd REST call and set the permissions. For Linux, the jwt key is generated as follows:
 
@@ -265,13 +268,13 @@ chown slurm:slurm /etc/slurm/jwt_hs256.key
 chmod 600 /etc/slurm/jwt_hs256.key
 ```
 
-## Running slurmrestd
+### Running slurmrestd
 
-### Start slurmctld and slurmdbd with JWT Authentication
+#### Start slurmctld and slurmdbd with JWT Authentication
 
 Now that slurmctld and slurmdbd are configured for alternate, jwt authentication, start slurmdbd, then slurmctd.
 
-### Start slurmrestd
+#### Start slurmrestd
 
 The slurmrestd daemon is started as follows (note the SLURM_JWT=daemon env variable)
 
@@ -361,19 +364,47 @@ slurmrestd: debug2: _on_header_value: [[localhost]:39674] Header: X-SLURM-USER-N
 slurmrestd: debug2: _on_header_value: [[localhost]:39674] Header: X-SLURM-USER-TOKEN Value: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJleHAiOjE2NDE4MjMxODYsImlhdCI6MTY0MTgyMTM4Niwic3VuIjoic2x1cm0ifQ.Rc6BIFHAMlZsLQVBAgN-8kPFw5Onc5kWgqMCG287WSc
 ```
 
-# Slurm Administration Notes
+## JWT Authentication Scripts
 
-## Upgrade
+slurm-cloud-integration features several [authentication](src/scripts/authentication) Python scripts that encapsulate logic to generate RS256 JWT authentication artifacts for slurmrestd authentication.
+
+### Generating PEM File
+
+The Privacy Enhanced Mail (PEM) files is a type of Public Key Infrastructure (PKI) file used for keys and certificates as well as to generate the JSON Web Key Set (JWKS) file used for RS256 authentication. The [create_jwks_pem.py](src/scripts/authentication/create_jwks_pem.py) script is used to generate the jwks PEM file as follows;
+
+```
+python create_jwks_pem.py --pem_file_path ./slurm-jwks.pem
+```
+
+### Generating jwks.json File
+
+The jwks.json file that configures slurmrestd RS256 authentication is generated with the [create_jwks_json.py](src/scripts/authentication/create_jwks_json.py) as follows:
+
+```
+python create_jwks_json.py --pem_file_path=./slurm-jwks.pem --jwks_json_file_path ./jwks.json
+```
+
+### Generating jwt token
+
+The JSON Web Token (JWT) file used to authenticate slurmrestd clients is generated via the script as follows:
+
+```
+python create_jwt_token.py --pem_file_path=./slurm-jwks.pem --jwks_json_file ./jwks.json
+```
+
+## Slurm Administration Notes
+
+### Upgrade
 
 The current version of slurm needs to be removed prior to installing the new version. The command for removing slurm is as follows:
 
 ```
 # get slurm version
 slurmctld -V 
-slurm-20.02.7
+slurm-22.05.3
 
 # remove all slurm components
-dpkg -P slurm-20.02.7
+dpkg -P slurm-22.05.3
 ```
 
 Once the previous version of slurm is removed, proceed with the standard slurm install instructions
