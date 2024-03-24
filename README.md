@@ -6,7 +6,7 @@ The slurm-cloud-integration project contains Dockerfiles, config files, python s
 
 ## Slurm Docker Images
 
-The combination of the slurm-single-node, slurm-client and slurm-jupyter-docker Dockerfiles are based upon the excellent work by [Rodrigo Ancavil](https://medium.com/analytics-vidhya/slurm-cluster-with-docker-9f242deee601).
+The combination of the slurm-single-node, slurm-client and slurm-jupyter Dockerfiles are based upon the excellent work by [Rodrigo Ancavil](https://medium.com/analytics-vidhya/slurm-cluster-with-docker-9f242deee601).
 
 ### slurm-single-node: full stack, single-node Slurm in Docker
 
@@ -74,14 +74,14 @@ If the munge keys don't match, the following error occurs:
 slurmctld: fatal: You are running with a database but for some reason we have no TRES from it.  This should only happen if the database is down and you don't have any state files.
 ```
 
-### slurm-jupyter-docker
+### slurm-jupyter
 
-The [slurm-jupyter-docker](https://github.com/hokiegeek2/slurm-cloud-integration/blob/master/src/docker/slurm-jupyter-docker) Dockerfile and slurm-jupyter [Helm chart](https://github.com/hokiegeek2/slurm-cloud-integration/tree/master/deployment/charts/slurm-jupyter) enables deployment of the awesome [NERSC](https://github.com/NERSC) [jupyterlab-slurm](https://github.com/NERSC/jupyterlab-slurm) application to Kubernetes. 
+The [slurm-jupyter](https://github.com/hokiegeek2/slurm-cloud-integration/blob/master/src/docker/slurm-jupyter) Dockerfile and slurm-jupyter [Helm chart](https://github.com/hokiegeek2/slurm-cloud-integration/tree/master/deployment/charts/slurm-jupyter) enables deployment of the awesome [NERSC](https://github.com/NERSC) [jupyterlab-slurm](https://github.com/NERSC/jupyterlab-slurm) application to Kubernetes. 
 
 The slurm-jupyter Docker image is built from the project root directory as follows:
 
 ```
-docker build -f src/docker/slurm-jupyter-docker -t hokiegeek2/slurm-jupyter:$VERSION .
+docker build -f src/docker/slurm-jupyter -t hokiegeek2/slurm-jupyter:$VERSION .
 ```
 
 The command sequence to start slurm-jupyterlab is contained within the [start-slurm-jupyter.sh](https://github.com/hokiegeek2/slurm-cloud-integration/blob/master/src/scripts/start-slurm-jupyter.sh) file and is as follows:
