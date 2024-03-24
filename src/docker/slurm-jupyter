@@ -1,4 +1,4 @@
-FROM debian
+FROM ubuntu:22.04
 
 RUN DEBIAN_FRONTEND=noninteractive 
 
@@ -15,12 +15,12 @@ RUN useradd -m admin -s /usr/bin/bash -d /home/admin \
 
 RUN apt install slurm-client -y
 
-RUN apt-get update && apt install nodejs -y 
-RUN apt-get update && apt install npm  -y 
+RUN  curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash - && apt-get install -y nodejs
+
 RUN npm install -g configurable-http-proxy
 
-RUN pip3 install jupyterlab==2.1.2 && pip3 install jupyterlab_slurm==2.0.0
-RUN jupyter labextension install jupyterlab-slurm
+RUN pip3 install jupyterlab==2.1.2
+RUN pip3 install jupyterlab_slurm==3.0.1
 
 ADD src/scripts/start-slurm-jupyter.sh /tmp/start-slurm-jupyter.sh
 
