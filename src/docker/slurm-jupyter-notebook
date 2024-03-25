@@ -1,8 +1,12 @@
-FROM ubuntu:18.04 as slurm_build
+FROM ubuntu:22.04 as slurm_build
+
+ARG VERSION=${VERSION}
+ENV VERSION=${VERSION}
 
 # Install all base dependencies
-RUN apt-get update && apt install sudo git gcc make ruby ruby-dev python3 \
-    libpam0g-dev libmariadb-client-lgpl-dev libmysqlclient-dev wget vim curl -y
+RUN apt update && apt-get update && apt install sudo git gcc make ruby \
+        ruby-dev python3 libpam0g-dev libmysqlclient-dev mariadb-client \
+        mariadb-server wget vim curl -y
 
 # Install munge
 RUN apt-get install libmunge-dev libmunge2 munge -y
@@ -30,20 +34,25 @@ RUN make -j
 RUN make install
 
 WORKDIR /storage
-RUN wget https://download.schedmd.com/slurm/slurm-21.08.5.tar.bz2
-RUN tar xf slurm-21.08.5.tar.bz2
-WORKDIR /storage/slurm-21.08.5
+RUN wget https://download.schedmd.com/slurm/slurm-$VERSION.tar.bz2 && \
+    tar xvf slurm-$VERSION.tar.bz2
+WORKDIR /storage/slurm-$VERSION
 
 RUN ./configure --prefix=/storage/slurm-build --sysconfdir=/etc/slurm --enable-pam \
-    --with-pam_dir=/lib/x86_64-linux-gnu/security/ --without-shared-libslurm \
-    --with-http-parser=/usr/ --with-yaml=/usr/ --with-jwt=/storage/slurm-build/ \
-    --enable-slurmrestd
+    --with-pam_dir=/lib/x86_64-linux-gnu/security/ --without-shared-libslurm 
 
 RUN make
 RUN make contrib
 RUN make install
 
+RUN gem install fpm
+
+RUN fpm -s dir -t deb -v 1.0 -n slurm-$VERSION --prefix=/usr -C /storage/slurm-build .
+
 FROM jupyterhub/singleuser:1.4.2
+
+ARG VERSION=${VERSION}
+ENV VERSION=${VERSION}
 
 WORKDIR /
 USER root
@@ -74,12 +83,13 @@ RUN echo "jovyan     ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 RUN useradd -m slurm -s /usr/bin/bash -d /home/slurm
 
 # Add slurm-juptyerlab dependencies
-RUN apt install nodejs npm -y 
+RUN curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash - && apt-get install -y nodejs
 RUN npm install -g configurable-http-proxy
 
 ARG SLURM_JUPYTER_VERSION=${SLURM_JUPYTER_VERSION}
 ENV SLURM_JUPYTER_VERSION=${SLURM_JUPYTER_VERSION}
 
+RUN pip3 install jupyterlab==2.1.2
 RUN pip3 install jupyterlab_slurm==${SLURM_JUPYTER_VERSION}
 RUN pip3 install jupyterlab-git
 

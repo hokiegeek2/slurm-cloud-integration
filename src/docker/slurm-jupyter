@@ -15,7 +15,7 @@ RUN useradd -m admin -s /usr/bin/bash -d /home/admin \
 
 RUN apt install slurm-client -y
 
-RUN  curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash - && apt-get install -y nodejs
+RUN curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash - && apt-get install -y nodejs
 
 RUN npm install -g configurable-http-proxy
 
