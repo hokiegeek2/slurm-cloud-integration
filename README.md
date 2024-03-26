@@ -386,7 +386,7 @@ python create_jwks_json.py --pem_file_path=./slurm-jwks.pem --jwks_json_file_pat
 
 ### Generating jwt token
 
-The JSON Web Token (JWT) file used to authenticate slurmrestd clients is generated via the script as follows:
+The JSON Web Token (JWT) file used to authenticate slurmrestd clients is generated via the [create_jwt_token.py](https://github.com/hokiegeek2/slurm-cloud-integration/blob/master/src/scripts/authentication/create_jwt_token.py) script as follows:
 
 ```
 python create_jwt_token.py --pem_file_path=./slurm-jwks.pem --jwks_json_file ./jwks.json
